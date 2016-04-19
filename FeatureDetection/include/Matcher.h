@@ -57,7 +57,7 @@ public:
 	}
 
 	// Clear matches for which NN ratio is > than threshold
-	int ratioTest(vector<vector<DMatch>> &matches);
+	int ratioTest(vector< vector<DMatch> > &matches);
 
 	// Use a fast feature matcher
 	void fastMatcher(const Mat &curr_frame,
