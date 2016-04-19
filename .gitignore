@@ -2,14 +2,11 @@
 img
 *.png
 *.jpg
-<<<<<<< HEAD
-*CMakeFiles*
 *swp
-=======
 *CMakeCache.txt
 *Makefile
 *CMakeFiles
 *cmake_install.cmake
 bin
 *main*
->>>>>>> 938ed5e9a04f216e28bd349c415c27a8b4a52334
+Makefile
