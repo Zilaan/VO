@@ -63,7 +63,7 @@ public:
 	void fastMatcher(const Mat &curr_frame,
 					 vector<KeyPoint> &prev_keypoints, Mat &prev_descriptors,
 					 vector<KeyPoint> &curr_keypoints, Mat &curr_descriptors,
-					 vector<DMatch> &matches);
+					 vector<DMatch> &good_matches);
 
 	void fastMatcher(const Mat &first_frame, vector<KeyPoint> &first_keypoints,
 					 Mat &first_descriptors);
