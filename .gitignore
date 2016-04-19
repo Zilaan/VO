@@ -2,5 +2,9 @@
 img
 *.png
 *.jpg
-*CMakeFiles*
-*swp
+*CMakeCache.txt
+*Makefile
+*CMakeFiles
+*cmake_install.cmake
+bin
+*main*
