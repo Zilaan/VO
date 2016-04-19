@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 2.8)
-project(DetectFeat)
+project(FeatureDetection)
 find_package(OpenCV)
-include_directories(${OpenCV_INCLUDE_DIRS})
-add_executable(SURF_detect DetectFeat.cpp)
-target_link_libraries(SURF_detect ${OpenCV_LIBS})
+set(target DetectFeatures)
+set(matcher_src
+	src/Matcher.cpp
+)
+
+set(matcher_headers
+	include/Matcher.h
+)
+include_directories(${OpenCV_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_executable(${target} src/main_matcher_test.cpp ${matcher_src} ${matcher_headers})
+target_link_libraries(${target} ${OpenCV_LIBS})
