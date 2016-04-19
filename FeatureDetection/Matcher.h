@@ -60,8 +60,13 @@ public:
 	int ratioTest(vector<vector<DMatch>> &matches);
 
 	// Use a fast feature matcher
-	void fastMatcher(const Mat &prev_frame, const Mat &curr_frame,
-					 vector<DMatch> &matches, vector<KeyPoint> &keypoints);
+	void fastMatcher(const Mat &curr_frame,
+					 vector<KeyPoint> &prev_keypoints, Mat &prev_descriptors,
+					 vector<KeyPoint> &curr_keypoints, Mat &curr_descriptors,
+					 vector<DMatch> &matches);
+
+	void fastMatcher(const Mat &first_frame, vector<KeyPoint> &first_keypoints,
+					 Mat &first_descriptors);
 
 private:
 	// Pointer to feature detector object
