@@ -8,3 +8,4 @@ img
 *cmake_install.cmake
 bin
 *main*
+Makefile
