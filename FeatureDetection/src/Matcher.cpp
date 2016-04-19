@@ -17,11 +17,11 @@ void Matcher::computeDescriptors(const Mat &image, vector<KeyPoint> &keypoints,
 	_descriptor->compute(image, keypoints, descriptors);
 }
 
-int Matcher::ratioTest(vector<vector<DMatch>> &matches)
+int Matcher::ratioTest(vector< vector<DMatch> > &matches)
 {
 	int removed = 0;
 
-	vector<vector<DMatch>>::iterator it;
+	vector< vector<DMatch> >::iterator it;
 
 	// Check all matches
 	for(it = matches.begin(); it != matches.end(); ++it)
@@ -45,7 +45,7 @@ int Matcher::ratioTest(vector<vector<DMatch>> &matches)
 	return removed;
 }
 
-void fastMatcher(const Mat &curr_frame,
+void Matcher::fastMatcher(const Mat &curr_frame,
 				 vector<KeyPoint> &prev_keypoints, Mat &prev_descriptors,
 				 vector<KeyPoint> &curr_keypoints, Mat &curr_descriptors,
 				 vector<DMatch> &good_matches)
@@ -59,7 +59,7 @@ void fastMatcher(const Mat &curr_frame,
 	// Extract descriptors
 	this->computeDescriptors(curr_frame, curr_keypoints, curr_descriptors);
 
-	vector<vector<DMatch>> matches;
+	vector< vector<DMatch> > matches;
 	// Match 
 	_matcher->knnMatch(prev_descriptors, curr_descriptors, matches, 2);
 
@@ -75,7 +75,7 @@ void fastMatcher(const Mat &curr_frame,
 	}
 }
 
-void fastMatcher(const Mat &first_frame, vector<KeyPoint> &first_keypoints,
+void Matcher::fastMatcher(const Mat &first_frame, vector<KeyPoint> &first_keypoints,
 				 Mat &first_descriptors)
 {
 	// Detect features
