@@ -11,7 +11,7 @@ using namespace cv;
 class Matcher
 {
 public:
-	Matcher()
+	Matcher() : _ratio(0.8f)
 	{
 		// Use ORB as default detector
 		_detector = ORB::create();
