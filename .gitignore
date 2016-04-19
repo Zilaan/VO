@@ -3,3 +3,4 @@ img
 *.png
 *.jpg
 *CMakeFiles*
+*swp
