@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(FeatureDetection)
 find_package(OpenCV)
 set(target DetectFeatures)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(matcher_src
 	src/Matcher.cpp
 )
