@@ -1,7 +1,7 @@
 #ifndef ODOMETRY_H
 #define ODOMETRY_H
 
-#include "/Users/Raman/Documents/Programmering/opencv/VO/FeatureDetection/include/Matcher.h"
+#include "Matcher.h"
 #include <opencv2/core/core.hpp>
 
 class Odometry
@@ -47,13 +47,13 @@ private:
 	parameters param;
 	Matcher *mainMatcher;
 
-	std::vector<KeyPoint> *p_keypoints;
-	std::vector<KeyPoint> *c_keypoints;
-	std::vector<KeyPoint> *swap_keypoints;
-	std::vector<DMatch> *good_matches;
-	cv::Mat *c_descriptors;
-	cv::Mat *p_descriptors;
-	cv::Mat *swap_descriptors;
+	std::vector<cv::KeyPoint> p_keypoints;
+	std::vector<cv::KeyPoint> c_keypoints;
+	std::vector<cv::KeyPoint> swap_keypoints;
+	std::vector<cv::DMatch> good_matches;
+	cv::Mat c_descriptors;
+	cv::Mat p_descriptors;
+	cv::Mat swap_descriptors;
 	bool firstRun;
 };
 
