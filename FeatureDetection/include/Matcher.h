@@ -11,17 +11,17 @@ using namespace cv;
 class Matcher
 {
 public:
-	Matcher() : _ratio(0.8f)
+	struct parameters
 	{
-		// Use ORB as default detector
-		_detector = ORB::create();
+		//
+		int test;
+		parameters()
+		{
+			test = 0;
+		}
+	};
 
-		// Use ORB as default descriptor
-		_descriptor = ORB::create();
-
-		// Use Brute Force with Norm Hamming as default
-		_matcher = makePtr<BFMatcher>((int) NORM_HAMMING, false);
-	}
+	Matcher(parameters param);
 
 	virtual ~Matcher();
 
