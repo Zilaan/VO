@@ -10,8 +10,8 @@ set(matcher_src
 
 set(matcher_headers
 	include/Odometry.h
-	../FeatureDetection/include/Matcher.g
+	../FeatureDetection/include/Matcher.h
 )
 include_directories(${OpenCV_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
-add_executable(${target} src/main_matcher_test.cpp ${matcher_src} ${matcher_headers})
+add_executable(${target} src/main_viso.cpp ${matcher_src} ${matcher_headers})
 target_link_libraries(${target} ${OpenCV_LIBS})
