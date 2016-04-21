@@ -5,12 +5,12 @@ set(target viso)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(matcher_src
 	src/Odometry.cpp
-	../FeatureDetection/src/Matcher.cpp
+	src/Matcher.cpp
 )
 
 set(matcher_headers
 	include/Odometry.h
-	../FeatureDetection/include/Matcher.h
+	include/Matcher.h
 )
 include_directories(${OpenCV_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_executable(${target} src/main_viso.cpp ${matcher_src} ${matcher_headers})
