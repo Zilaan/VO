@@ -2,6 +2,18 @@
 #include <time.h>
 #include <opencv2/features2d/features2d.hpp>
 
+Matcher::Matcher(parameters param) : _ratio(0.8f)
+{
+	// Use ORB as default detector
+	_detector = ORB::create();
+
+	// Use ORB as default descriptor
+	_descriptor = ORB::create();
+
+	// Use Brute Force with Norm Hamming as default
+	_matcher = makePtr<BFMatcher>((int) NORM_HAMMING, false);
+}
+
 Matcher::~Matcher()
 {
 }
