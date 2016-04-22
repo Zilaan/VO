@@ -43,12 +43,8 @@ public:
 		_matcher = match;
 	}
 
-	// Compute the feature detectors in the image
-	void computeDetectors(const Mat &image, vector<KeyPoint> &keypoints);
-
 	// Compute the feature descriptors
-	void computeDescriptors(const Mat &image, vector<KeyPoint> &keypoints,
-							Mat &descriptors);
+	void computeDescriptors(const Mat &image, Mat &descriptors);
 
 	// Set ratio threshold
 	void setRatio(float rat)
@@ -60,13 +56,8 @@ public:
 	int ratioTest(vector< vector<DMatch> > &matches);
 
 	// Use a fast feature matcher
-	void fastMatcher(const Mat &curr_frame,
-					 vector<KeyPoint> &prev_keypoints, Mat &prev_descriptors,
-					 vector<KeyPoint> &curr_keypoints, Mat &curr_descriptors,
+	void fastMatcher(Mat &prev_descriptors, Mat &curr_descriptors,
 					 vector<DMatch> &good_matches);
-
-	void fastMatcher(const Mat &first_frame, vector<KeyPoint> &first_keypoints,
-					 Mat &first_descriptors);
 
 private:
 	// Pointer to feature detector object
