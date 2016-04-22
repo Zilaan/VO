@@ -5,9 +5,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
-using namespace std;
-using namespace cv;
-
 class Matcher
 {
 public:
@@ -26,29 +23,26 @@ public:
 	virtual ~Matcher();
 
 	// Set feature detector
-	void setDetector(const Ptr<FeatureDetector> &detec)
+	void setDetector(const cv::Ptr<cv::FeatureDetector> &detec)
 	{
 		_detector = detec;
 	}
 
 	// Set feature descriptor
-	void setDescriptor(const Ptr<DescriptorExtractor> &desc)
+	void setDescriptor(const cv::Ptr<cv::DescriptorExtractor> &desc)
 	{
 		_descriptor = desc;
 	}
 
 	// Set feature matcher
-	void setMatcher(const Ptr<DescriptorMatcher> &match)
+	void setMatcher(const cv::Ptr<cv::DescriptorMatcher> &match)
 	{
 		_matcher = match;
 	}
 
-	// Compute the feature detectors in the image
-	void computeDetectors(const Mat &image, vector<KeyPoint> &keypoints);
-
 	// Compute the feature descriptors
-	void computeDescriptors(const Mat &image, vector<KeyPoint> &keypoints,
-							Mat &descriptors);
+	void computeDescriptors(const cv::Mat &image, cv::Mat &descriptors,
+							std::vector<cv::KeyPoint> keypoints);
 
 	// Set ratio threshold
 	void setRatio(float rat)
@@ -57,26 +51,21 @@ public:
 	}
 
 	// Clear matches for which NN ratio is > than threshold
-	int ratioTest(vector< vector<DMatch> > &matches);
+	int ratioTest(std::vector< std::vector<cv::DMatch> > &matches);
 
 	// Use a fast feature matcher
-	void fastMatcher(const Mat &curr_frame,
-					 vector<KeyPoint> &prev_keypoints, Mat &prev_descriptors,
-					 vector<KeyPoint> &curr_keypoints, Mat &curr_descriptors,
-					 vector<DMatch> &good_matches);
-
-	void fastMatcher(const Mat &first_frame, vector<KeyPoint> &first_keypoints,
-					 Mat &first_descriptors);
+	void fastMatcher(cv::Mat &prev_descriptors, cv::Mat &curr_descriptors,
+					 std::vector<cv::DMatch> &good_matches);
 
 private:
 	// Pointer to feature detector object
-	Ptr<FeatureDetector>     _detector;
+	cv::Ptr<cv::FeatureDetector>     _detector;
 
 	// Pointer to feature descriptor object
-	Ptr<DescriptorExtractor> _descriptor;
+	cv::Ptr<cv::DescriptorExtractor> _descriptor;
 
 	// Pointer to feature matcher
-	Ptr<DescriptorMatcher>   _matcher;
+	cv::Ptr<cv::DescriptorMatcher>   _matcher;
 
 	// Max ratio between 1st and 2nd NN
 	float _ratio;
