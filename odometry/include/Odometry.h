@@ -41,21 +41,31 @@ public:
 
 private:
 	// Estimate motion
-	void estimateMotion();
-	void detectAndMatch(const cv::Mat &image);
+	void fivePoint(const std::vector<cv::KeyPoint> &x,
+				   const std::vector<cv::KeyPoint> &xp,
+				   std::vector<cv::DMatch> &mask);
+
+	void swapAll();
 
 	// Paramters used
 	parameters param;
 	Matcher *mainMatcher;
 
-	std::vector<cv::KeyPoint> p_keypoints;
-	std::vector<cv::KeyPoint> c_keypoints;
-	std::vector<cv::KeyPoint> swap_keypoints;
-	std::vector<cv::DMatch> good_matches;
-	cv::Mat c_descriptors;
-	cv::Mat p_descriptors;
-	cv::Mat swap_descriptors;
-	bool firstRun;
+	cv::Mat f1Descriptors;
+	cv::Mat f2Descriptors;
+	cv::Mat f3Descriptors;
+
+	std::vector<cv::DMatch> matches12;
+	std::vector<cv::DMatch> matches13;
+	std::vector<cv::DMatch> matches23;
+
+	std::vector<cv::KeyPoint> f1Keypoints;
+	std::vector<cv::KeyPoint> f2Keypoints;
+	std::vector<cv::KeyPoint> f3Keypoints;
+	std::vector<cv::KeyPoint> goodF1;
+	std::vector<cv::KeyPoint> goodF2;
+	std::vector<cv::KeyPoint> goodF3;
+	int frameNr;
 };
 
 #endif // ODOMETRY_H
