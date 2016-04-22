@@ -42,6 +42,7 @@ public:
 private:
 	// Estimate motion
 	void estimateMotion();
+	void detectAndMatch(const cv::Mat &image);
 
 	// Paramters used
 	parameters param;

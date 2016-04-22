@@ -13,6 +13,8 @@ Odometry::Odometry(parameters param) : param(param), firstRun(true)
 
 Odometry::~Odometry()
 {
+	// Free memory allocated by mainMatcher
+	delete mainMatcher;
 }
 
 /* Assuming that the Matcher is setup,
@@ -21,7 +23,12 @@ Odometry::~Odometry()
  */
 void Odometry::process(const Mat &image)
 {
-	if(true)
+	detectAndMatch(image);
+}
+
+void Odometry::detectAndMatch(const Mat &image)
+{
+	if(firstRun)
 	{
 		// Only one frame available
 		mainMatcher->fastMatcher(image, p_keypoints, p_descriptors);
