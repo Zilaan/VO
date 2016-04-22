@@ -70,10 +70,12 @@ void Odometry::fivePoint(const vector<KeyPoint> &x,
 	vector<Point2f> matchedPoints;
 	vector<Point2f> matchedPointsPrime;
 
+	// Copy only matched keypoints
 	vector<DMatch>::iterator it;
 	for(it = mask.begin(); it != mask.end(); ++it)
 	{
-		;
+		matchedPoints.push_back(x[it->queryIdx].pt);
+		matchedPointsPrime.push_back(xp[it->trainIdx].pt);
 	}
 }
 
