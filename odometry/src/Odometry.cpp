@@ -75,7 +75,7 @@ Mat Odometry::fivePoint(const vector<KeyPoint> &x,
 						const vector<KeyPoint> &xp,
 						vector<DMatch> &matches)
 {
-	Mat essential;
+	Mat essential, inliers;
 	vector<Point2f> matchedPoints;
 	vector<Point2f> matchedPointsPrime;
 
@@ -92,7 +92,7 @@ Mat Odometry::fivePoint(const vector<KeyPoint> &x,
 	Point2d pp(param.odParam.cu, param.odParam.cv);
 	essential = findEssentialMat(matchedPoints, matchedPointsPrime,
 							 param.odParam.f, pp, 0, param.odParam.ransacProb,
-							 param.odParam.ransacError, noArray());
+							 param.odParam.ransacError, inliers);
 	return essential;
 }
 
