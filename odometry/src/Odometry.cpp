@@ -118,7 +118,7 @@ triangulate(const Mat &M1, const Mat &M2,
 			const vector<KeyPoint> &xp,
 			vector<Point3d> &X)
 {
-	vector<Point4d> triang4D; // Triangulated 4D points
+	Mat triang4D; // Triangulated 4D points
 
 	// Triangulate points to 4D
 	triangulatePoints(M1, M2, x, xp, triang4D);
