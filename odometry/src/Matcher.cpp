@@ -22,7 +22,7 @@ Matcher::~Matcher()
 }
 
 void Matcher::computeDescriptors(const Mat &image, Mat &descriptors,
-								 vector<KeyPoint> keypoints)
+								 vector<KeyPoint> &keypoints)
 {
 	_detector->detect(image, keypoints);
 	_descriptor->compute(image, keypoints, descriptors);

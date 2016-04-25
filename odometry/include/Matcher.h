@@ -42,7 +42,7 @@ public:
 
 	// Compute the feature descriptors
 	void computeDescriptors(const cv::Mat &image, cv::Mat &descriptors,
-							std::vector<cv::KeyPoint> keypoints);
+							std::vector<cv::KeyPoint> &keypoints);
 
 	// Set ratio threshold
 	void setRatio(float rat)
