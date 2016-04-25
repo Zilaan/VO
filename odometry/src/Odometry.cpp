@@ -73,7 +73,7 @@ void Odometry::process(const Mat &image)
 
 Mat Odometry::fivePoint(const vector<KeyPoint> &x,
 						const vector<KeyPoint> &xp,
-						vector<DMatch> &mask)
+						vector<DMatch> &matches)
 {
 	Mat essential;
 	vector<Point2f> matchedPoints;
@@ -83,7 +83,7 @@ Mat Odometry::fivePoint(const vector<KeyPoint> &x,
 
 	// Copy only matched keypoints
 	vector<DMatch>::iterator it;
-	for(it = mask.begin(); it != mask.end(); ++it)
+	for(it = matches.begin(); it != matches.end(); ++it)
 	{
 		matchedPoints.push_back(x[it->queryIdx].pt);
 		matchedPointsPrime.push_back(xp[it->trainIdx].pt);
