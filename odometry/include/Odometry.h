@@ -14,14 +14,30 @@ public:
 		 * for the visual odometry
 		 * i.e. focus length etc.
 		 */
-		int test;
+
+		// Intrinsic camera paramters
+		float f;
+		float cu;
+		float cv;
+
+		// Ransac parameters
+		int ransacIterations;
+		float ransacError;
+		float ransacProb;
 		odometryParameters()
 		{
 			/*
 			 * Deafault values for
 			 * parameters from above
 			 */
-			test = 0;
+
+			f  = 1;
+			cu = 0;
+			cv = 0;
+
+			ransacIterations = 2000;
+			ransacError      = 2;
+			ransacProb       = 0.99;
 		}
 	};
 
@@ -41,14 +57,16 @@ public:
 
 private:
 	// Estimate motion
-	void fivePoint(const std::vector<cv::KeyPoint> &x,
-				   const std::vector<cv::KeyPoint> &xp,
-				   std::vector<cv::DMatch> &mask);
+	cv::Mat fivePoint(const std::vector<cv::KeyPoint> &x,
+					  const std::vector<cv::KeyPoint> &xp,
+				      std::vector<cv::DMatch> &mask);
 
 	void swapAll();
 
 	// Paramters used
 	parameters param;
+	cv::Mat K;
+	cv::Mat E;
 	Matcher *mainMatcher;
 
 	cv::Mat f1Descriptors;
