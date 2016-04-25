@@ -2,6 +2,7 @@
 #include "Odometry.h"
 #include "Matcher.h"
 #include <opencv2/core/core.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 
 using namespace std;
 using namespace cv;
@@ -9,6 +10,13 @@ using namespace cv;
 Odometry::Odometry(parameters param) : param(param), frameNr(1)
 {
 	mainMatcher = new Matcher(param.maParam);
+
+	// Set the intrinsic camera paramters
+	K = Mat::eye(3, 3, CV_64F);
+	K.at<double>(0, 0) = param.odParam.f;
+	K.at<double>(0, 2) = param.odParam.cu;
+	K.at<double>(1, 1) = param.odParam.f;
+	K.at<double>(1, 2) = param.odParam.cv;
 }
 
 Odometry::~Odometry()
@@ -34,8 +42,8 @@ void Odometry::process(const Mat &image)
 		// and compute pose using Nister's five point
 		mainMatcher->computeDescriptors(image, f2Descriptors, f2Keypoints);
 		mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12);
-		fprintf(stdout, "Matches: %lu\n", matches12.size());
 		// 5point()
+		E = fivePoint(f1Keypoints, f2Keypoints, matches12);
 		// Triangulate()
 	}
 	else
@@ -63,12 +71,15 @@ void Odometry::process(const Mat &image)
 	frameNr++;
 }
 
-void Odometry::fivePoint(const vector<KeyPoint> &x,
+Mat Odometry::fivePoint(const vector<KeyPoint> &x,
 						const vector<KeyPoint> &xp,
 						vector<DMatch> &mask)
 {
+	Mat essential;
 	vector<Point2f> matchedPoints;
 	vector<Point2f> matchedPointsPrime;
+
+	cout << "size: " << x.size() << endl;
 
 	// Copy only matched keypoints
 	vector<DMatch>::iterator it;
@@ -77,6 +88,12 @@ void Odometry::fivePoint(const vector<KeyPoint> &x,
 		matchedPoints.push_back(x[it->queryIdx].pt);
 		matchedPointsPrime.push_back(xp[it->trainIdx].pt);
 	}
+
+	Point2d pp(param.odParam.cu, param.odParam.cv);
+	essential = findEssentialMat(matchedPoints, matchedPointsPrime,
+							 param.odParam.f, pp, 0, param.odParam.ransacProb,
+							 param.odParam.ransacError, noArray());
+	return essential;
 }
 
 void Odometry::swapAll()
