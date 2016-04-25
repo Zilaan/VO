@@ -73,9 +73,9 @@ void Odometry::process(const Mat &image)
 
 Mat Odometry::fivePoint(const vector<KeyPoint> &x,
 						const vector<KeyPoint> &xp,
-						vector<DMatch> &mask)
+						vector<DMatch> &matches)
 {
-	Mat essential;
+	Mat essential, inliers, R, t;
 	vector<Point2f> matchedPoints;
 	vector<Point2f> matchedPointsPrime;
 
@@ -83,16 +83,20 @@ Mat Odometry::fivePoint(const vector<KeyPoint> &x,
 
 	// Copy only matched keypoints
 	vector<DMatch>::iterator it;
-	for(it = mask.begin(); it != mask.end(); ++it)
+	for(it = matches.begin(); it != matches.end(); ++it)
 	{
 		matchedPoints.push_back(x[it->queryIdx].pt);
 		matchedPointsPrime.push_back(xp[it->trainIdx].pt);
 	}
 
-	Point2d pp(param.odParam.cu, param.odParam.cv);
 	essential = findEssentialMat(matchedPoints, matchedPointsPrime,
-							 param.odParam.f, pp, 0, param.odParam.ransacProb,
-							 param.odParam.ransacError, noArray());
+								 K, RANSAC, param.odParam.ransacProb,
+								 param.odParam.ransacError, inliers);
+
+	// Recover R and t from E
+	recoverPose(essential, matchedPoints, matchedPointsPrime, K, R, t, inliers);
+	cout << "R: " << R << endl;
+	cout << "t: " << t << endl;
 	return essential;
 }
 

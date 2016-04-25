@@ -59,7 +59,7 @@ private:
 	// Estimate motion
 	cv::Mat fivePoint(const std::vector<cv::KeyPoint> &x,
 					  const std::vector<cv::KeyPoint> &xp,
-				      std::vector<cv::DMatch> &mask);
+				      std::vector<cv::DMatch> &matches);
 
 	void swapAll();
 
