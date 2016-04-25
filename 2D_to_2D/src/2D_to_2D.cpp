@@ -28,12 +28,14 @@ int main( int argc, char** argv )
 	cam_par.cv = 194.1;
 	cam_par.height = 1.6;
 	cam_par.pitch = -0.08;
-	Mat cameraMatrix = (Mat_<double>(3,3) << cam_par.f, 0, cam_par.cu, 0, cam_par.f, cam_par.cv, 0, 0, 1);
+	Mat cameraMatrix = (Mat_<double>(3,3) << 	cam_par.f, 0, cam_par.cu, 
+							0, cam_par.f, cam_par.cv, 
+							0, 0, 1);
 //Read image sequence
 	
 	if ( argc != 2 && argc != 3 )
 	{
-		cout << "Call function with ./filename <image dir> <path to the first image: path/img_%02d.jpg> optional: <number of images>" << endl;
+		cout << "Call function with ./filename <path to the first image: path/img_%02d.jpg> optional: <number of images>" << endl;
 		cout << argv[1] << endl;
 		return -1;
 	}
@@ -107,16 +109,26 @@ int main( int argc, char** argv )
 			
 		for ( vector<DMatch>::iterator it = good_matches.begin(); it != good_matches.end(); ++it )
 		{
-			cout << it->queryIdx << " " << it->trainIdx << endl;
 			prev_matched_keypoints.push_back(prev_keypoints[it->queryIdx].pt);
 			curr_matched_keypoints.push_back(curr_keypoints[it->trainIdx].pt);
 		}
 		cout << prev_matched_keypoints.size() << "    " << curr_matched_keypoints.size() << endl;
 		Mat E = findEssentialMat(	prev_matched_keypoints, curr_matched_keypoints,
 						cameraMatrix, RANSAC, 0.999, 1.0, noArray() );
-		cout << E << endl;
+		Point2d pp(cam_par.cu, cam_par.cv);
+		
+		Mat R; Mat t; Mat mask;
+		recoverPose( E, prev_matched_keypoints, curr_matched_keypoints, R, t, cam_par.f, pp, mask );
+
+		cout << "R: " << R << " t: " << t << endl;
+		
+		//Mat R1; Mat R2; Mat t;
+		//decomposeEssentialMat( 		E,R1,R2,t);
+			
+		//cout << "R1: " << R1 << " R2: " << R2 << " t: " << t << endl;
+
 		imshow("Matches", match_img);
-		waitKey(3000);
+		//waitKey(3000);
 		j++;
 		
 		//Save current info to previous
