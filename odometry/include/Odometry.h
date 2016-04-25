@@ -63,7 +63,7 @@ private:
 
 	void swapAll();
 
-	triangulate(const cv::Mat &M1, const cv::Mat &M2,
+	void triangulate(const cv::Mat &M1, const cv::Mat &M2,
 				const std::vector<cv::KeyPoint> &x,
 				const std::vector<cv::KeyPoint> &xp,
 				std::vector<cv::Point3d> &X);
