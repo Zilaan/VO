@@ -1,4 +1,5 @@
 #include <iostream>
+#include <ctime>
 #include "Odometry.h"
 #include "Matcher.h"
 #include <opencv2/core/core.hpp>
@@ -42,6 +43,7 @@ void Odometry::process(const Mat &image)
 		// and compute pose using Nister's five point
 		mainMatcher->computeDescriptors(image, f2Descriptors, f2Keypoints);
 		mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12);
+		fprintf(stdout, "1-2 matches: %lu\n", matches12.size());
 		// 5point()
 		E = fivePoint(f1Keypoints, f2Keypoints, matches12);
 		// Triangulate()
@@ -79,7 +81,7 @@ Mat Odometry::fivePoint(const vector<KeyPoint> &x,
 	vector<Point2f> matchedPoints;
 	vector<Point2f> matchedPointsPrime;
 
-	cout << "size: " << x.size() << endl;
+	//cout << "size: " << x.size() << endl;
 
 	// Copy only matched keypoints
 	vector<DMatch>::iterator it;
@@ -95,8 +97,8 @@ Mat Odometry::fivePoint(const vector<KeyPoint> &x,
 
 	// Recover R and t from E
 	recoverPose(essential, matchedPoints, matchedPointsPrime, K, R, t, inliers);
-	cout << "R: " << R << endl;
-	cout << "t: " << t << endl;
+	//cout << "R: " << R << endl;
+	//cout << "t: " << t << endl;
 	return essential;
 }
 
@@ -129,4 +131,24 @@ void Odometry::triangulate(const Mat &M1, const Mat &M2,
 
 	// Convert to 3D
 	convertPointsHomogeneous(triang4D, X);
+}
+
+void Odometry::sharedMatches(const vector<DMatch> &m1,
+							 const vector<DMatch> &m2,
+							 vector<DMatch> &shared1,
+							 vector<DMatch> &shared2)
+{
+	vector<DMatch>::const_iterator it2, it1;
+	for(it1 = m1.begin(); it1 != m1.end(); ++it1)
+	{
+		for(it2 = m2.begin(); it2 != m2.end(); ++it2)
+		{
+			if(it2->queryIdx == it1->trainIdx)
+			{
+				shared1.push_back(*it1);
+				shared2.push_back(*it2);
+				break;
+			}
+		}
+	}
 }

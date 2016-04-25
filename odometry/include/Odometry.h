@@ -68,6 +68,11 @@ private:
 				const std::vector<cv::KeyPoint> &xp,
 				std::vector<cv::Point3d> &X);
 
+	void sharedMatches(const std::vector<cv::DMatch> &m1,
+					   const std::vector<cv::DMatch> &m2,
+					   std::vector<cv::DMatch> &shared1,
+					   std::vector<cv::DMatch> &shared2);
+
 	// Paramters used
 	parameters param;
 	cv::Mat K;
@@ -81,6 +86,8 @@ private:
 	std::vector<cv::DMatch> matches12;
 	std::vector<cv::DMatch> matches13;
 	std::vector<cv::DMatch> matches23;
+	std::vector<cv::DMatch> sharedMatches12;
+	std::vector<cv::DMatch> sharedMatches23;
 
 	std::vector<cv::KeyPoint> f1Keypoints;
 	std::vector<cv::KeyPoint> f2Keypoints;
