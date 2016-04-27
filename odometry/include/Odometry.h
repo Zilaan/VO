@@ -63,10 +63,9 @@ private:
 
 	void swapAll();
 
-	void triangulate(const cv::Mat &M1, const cv::Mat &M2,
-				const std::vector<cv::KeyPoint> &x,
-				const std::vector<cv::KeyPoint> &xp,
-				std::vector<cv::Point3d> &X);
+	void triangulate(const std::vector<cv::KeyPoint> &x,
+					 const std::vector<cv::KeyPoint> &xp,
+					 std::vector<cv::Point3d> &X);
 
 	void sharedMatches(const std::vector<cv::DMatch> &m1,
 					   const std::vector<cv::DMatch> &m2,
@@ -79,6 +78,8 @@ private:
 	cv::Mat E;
 	cv::Mat R;
 	cv::Mat t;
+	cv::Mat pM;
+	cv::Mat cM;
 
 	Matcher *mainMatcher;
 

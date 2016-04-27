@@ -18,6 +18,14 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	K.at<double>(0, 2) = param.odParam.cu;
 	K.at<double>(1, 1) = param.odParam.f;
 	K.at<double>(1, 2) = param.odParam.cv;
+
+	// Set the initial value of R, t and projection matrix
+	Mat Rt;
+	R = Mat::eye(3, 3, CV_64F);
+	t = Mat::zeros(3, 1, CV_64F);
+	hconcat(R, t, Rt);
+	pM = K * Rt;
+
 }
 
 Odometry::~Odometry()
@@ -114,17 +122,23 @@ void Odometry::swapAll()
 	// Swap matches
 	matches12.clear();
 	matches12 = matches23;
+
+	// Swap projection matrices
+	cM = pM.clone();
 }
 
-void Odometry::triangulate(const Mat &M1, const Mat &M2,
-			const vector<KeyPoint> &x,
-			const vector<KeyPoint> &xp,
-			vector<Point3d> &X)
+void Odometry::triangulate(const vector<KeyPoint> &x,
+						   const vector<KeyPoint> &xp,
+						   vector<Point3d> &X)
 {
-	Mat triang4D; // Triangulated 4D points
+	Mat triang4D, Rt; // Triangulated 4D points
+
+	// Compute the current projection matrix
+	hconcat(R, t, Rt);
+	cM = K * Rt;
 
 	// Triangulate points to 4D
-	triangulatePoints(M1, M2, x, xp, triang4D);
+	triangulatePoints(pM, cM, x, xp, triang4D);
 
 	// Convert to 3D
 	convertPointsHomogeneous(triang4D, X);
