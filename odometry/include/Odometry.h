@@ -57,9 +57,9 @@ public:
 
 private:
 	// Estimate motion
-	cv::Mat fivePoint(const std::vector<cv::KeyPoint> &x,
-					  const std::vector<cv::KeyPoint> &xp,
-				      std::vector<cv::DMatch> &matches);
+	void fivePoint(const std::vector<cv::KeyPoint> &x,
+				   const std::vector<cv::KeyPoint> &xp,
+				   std::vector<cv::DMatch> &matches);
 
 	void swapAll();
 
@@ -77,6 +77,9 @@ private:
 	parameters param;
 	cv::Mat K;
 	cv::Mat E;
+	cv::Mat R;
+	cv::Mat t;
+
 	Matcher *mainMatcher;
 
 	cv::Mat f1Descriptors;

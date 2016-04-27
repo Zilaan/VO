@@ -45,7 +45,7 @@ void Odometry::process(const Mat &image)
 		mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12);
 		fprintf(stdout, "1-2 matches: %lu\n", matches12.size());
 		// 5point()
-		E = fivePoint(f1Keypoints, f2Keypoints, matches12);
+		fivePoint(f1Keypoints, f2Keypoints, matches12);
 		// Triangulate()
 	}
 	else
@@ -73,11 +73,11 @@ void Odometry::process(const Mat &image)
 	frameNr++;
 }
 
-Mat Odometry::fivePoint(const vector<KeyPoint> &x,
-						const vector<KeyPoint> &xp,
-						vector<DMatch> &matches)
+void Odometry::fivePoint(const vector<KeyPoint> &x,
+						 const vector<KeyPoint> &xp,
+						 vector<DMatch> &matches)
 {
-	Mat essential, inliers, R, t;
+	Mat inliers;
 	vector<Point2f> matchedPoints;
 	vector<Point2f> matchedPointsPrime;
 
@@ -91,15 +91,12 @@ Mat Odometry::fivePoint(const vector<KeyPoint> &x,
 		matchedPointsPrime.push_back(xp[it->trainIdx].pt);
 	}
 
-	essential = findEssentialMat(matchedPoints, matchedPointsPrime,
-								 K, RANSAC, param.odParam.ransacProb,
-								 param.odParam.ransacError, inliers);
+	E = findEssentialMat(matchedPoints, matchedPointsPrime,
+						 K, RANSAC, param.odParam.ransacProb,
+						 param.odParam.ransacError, inliers);
 
 	// Recover R and t from E
-	recoverPose(essential, matchedPoints, matchedPointsPrime, K, R, t, inliers);
-	//cout << "R: " << R << endl;
-	//cout << "t: " << t << endl;
-	return essential;
+	recoverPose(E, matchedPoints, matchedPointsPrime, K, R, t, inliers);
 }
 
 void Odometry::swapAll()
