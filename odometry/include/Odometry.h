@@ -72,6 +72,10 @@ private:
 					   std::vector<cv::DMatch> &shared1,
 					   std::vector<cv::DMatch> &shared2);
 
+	void pnp(const std::vector<cv::Point3d> &X,
+			 const std::vector<cv::KeyPoint> &keypoints,
+			 const std::vector<cv::DMatch> &goodMatches);
+
 	// Paramters used
 	parameters param;
 	cv::Mat K;
@@ -99,6 +103,10 @@ private:
 	std::vector<cv::KeyPoint> goodF1;
 	std::vector<cv::KeyPoint> goodF2;
 	std::vector<cv::KeyPoint> goodF3;
+
+	std::vector<cv::Point3d> X12;
+	std::vector<cv::Point3d> X13;
+	std::vector<cv::Point3d> X23;
 	int frameNr;
 };
 

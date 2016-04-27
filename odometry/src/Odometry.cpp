@@ -25,7 +25,6 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	t = Mat::zeros(3, 1, CV_64F);
 	hconcat(R, t, Rt);
 	pM = K * Rt;
-
 }
 
 Odometry::~Odometry()
@@ -69,6 +68,7 @@ void Odometry::process(const Mat &image)
 		if(matches13.size() < 100 || matches23.size() < 200)
 		{
 			// Triangulate()
+			triangulate(f1Keypoints, f2Keypoints, X12);
 			// P3P()
 			swapAll();
 			cout << "		Motion" << endl;
@@ -124,7 +124,7 @@ void Odometry::swapAll()
 	matches12 = matches23;
 
 	// Swap projection matrices
-	cM = pM.clone();
+	pM = cM.clone();
 }
 
 void Odometry::triangulate(const vector<KeyPoint> &x,
@@ -142,6 +142,8 @@ void Odometry::triangulate(const vector<KeyPoint> &x,
 
 	// Convert to 3D
 	convertPointsHomogeneous(triang4D, X);
+	cout << x.size() << endl;
+	cout << xp.size() << endl;
 }
 
 void Odometry::sharedMatches(const vector<DMatch> &m1,
@@ -162,4 +164,11 @@ void Odometry::sharedMatches(const vector<DMatch> &m1,
 			}
 		}
 	}
+}
+
+void Odometry::pnp(const vector<Point3d> &X,
+				   const vector<KeyPoint> &keypoints,
+				   const vector<DMatch> &goodMatches)
+{
+	;
 }
