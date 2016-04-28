@@ -3,6 +3,7 @@
 
 #include "Matcher.h"
 #include <opencv2/core/core.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 
 class Odometry
 {
@@ -21,6 +22,7 @@ public:
 		float cv;
 
 		// Ransac parameters
+		int pnpFlags;
 		int ransacIterations;
 		float ransacError;
 		float ransacProb;
@@ -35,6 +37,7 @@ public:
 			cu = 0;
 			cv = 0;
 
+			pnpFlags         = cv::SOLVEPNP_P3P;
 			ransacIterations = 2000;
 			ransacError      = 2;
 			ransacProb       = 0.99;
@@ -72,9 +75,8 @@ private:
 					   std::vector<cv::DMatch> &shared1,
 					   std::vector<cv::DMatch> &shared2);
 
-	void pnp(const std::vector<cv::Point3d> &X,
-			 const std::vector<cv::KeyPoint> &keypoints,
-			 const std::vector<cv::DMatch> &goodMatches);
+	void pnp(const std::vector<cv::Point3f> &X,
+			 const std::vector<cv::Point2f> &x);
 
 	void sharedFeatures(const std::vector<cv::KeyPoint> &k1,
 						const std::vector<cv::KeyPoint> &k2,

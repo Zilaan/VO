@@ -70,13 +70,20 @@ void Odometry::process(const Mat &image)
 			sharedFeatures(f2Keypoints, f3Keypoints,
 						   goodF2Key, goodF3Key, sharedMatches23);
 
-			// Triangulate()
 			triangulate(goodF2Key, goodF3Key, worldPoints);
-			// P3P()
+
+			pnp(worldPoints, goodF3Key);
+
 			swapAll();
 		}
 		else
 		{
+			// Throw away last frame and clear variables related to it
+			f3Keypoints.clear();
+			matches13.clear();
+			matches23.clear();
+			sharedMatches23.clear();
+			goodF3Key.clear();
 		}
 	}
 	frameNr++;
@@ -123,6 +130,9 @@ void Odometry::swapAll()
 	matches12.clear();
 	matches12 = matches23;
 
+	sharedMatches12.clear();
+	sharedMatches12 = sharedMatches23;
+
 	// Swap projection matrices
 	pM = cM.clone();
 }
@@ -149,6 +159,8 @@ void Odometry::sharedMatches(const vector<DMatch> &m1,
 							 vector<DMatch> &shared1,
 							 vector<DMatch> &shared2)
 {
+	shared1.clear();
+	shared2.clear();
 	vector<DMatch>::const_iterator it2, it1;
 	for(it1 = m1.begin(); it1 != m1.end(); ++it1)
 	{
@@ -164,12 +176,33 @@ void Odometry::sharedMatches(const vector<DMatch> &m1,
 	}
 }
 
+void Odometry::pnp(const vector<Point3f> &X,
+				   const vector<Point2f> &x)
+{
+	Mat distCoeffs = Mat::zeros(4, 1, CV_64FC1);  // vector of distortion coefficients
+	Mat rvec = Mat::zeros(3, 1, CV_64FC1); // output rotation vector
+	Mat tvec = Mat::zeros(3, 1, CV_64FC1); // output translation vector
+	bool useExtrinsicGuess = false;
+
+	solvePnPRansac(X, x, K, distCoeffs, rvec, tvec, useExtrinsicGuess,
+				   param.odParam.ransacIterations,
+				   param.odParam.ransacError,
+				   param.odParam.ransacProb,
+				   noArray(),
+				   param.odParam.pnpFlags);
+
+	Rodrigues(rvec, R); // Convert rotation vector to matrix
+	t = tvec;
+}
+
 void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
 							  const vector<KeyPoint> &k2,
 							  vector<Point2f> &gk1,
 							  vector<Point2f> &gk2,
 							  const vector<DMatch> &mask)
 {
+	gk1.clear();
+	gk2.clear();
 	vector<DMatch>::const_iterator it;
 	for(it = mask.begin(); it != mask.end(); ++it)
 	{
@@ -180,6 +213,7 @@ void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
 
 void Odometry::fromHomogeneous(const Mat &Pt4f, vector<Point3f> &Pt3f)
 {
+	Pt3f.clear();
 	int N = Pt4f.cols; // Number of 4-channel elements
 	float x, y, z, w;
 	for(int i = 0; i < N; i++)
