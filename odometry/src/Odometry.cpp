@@ -130,7 +130,7 @@ void Odometry::swapAll()
 
 void Odometry::triangulate(const vector<Point2f> &x,
 						   const vector<Point2f> &xp,
-						   Mat &X)
+						   vector<Point3f> &X)
 {
 	Mat triangPt(4, x.size(), CV_32FC1);
 	Mat Rt;
@@ -142,7 +142,7 @@ void Odometry::triangulate(const vector<Point2f> &x,
 	// Triangulate points to 4D
 	triangulatePoints(pM, cM, x, xp, triangPt);
 
-	X = Mat::eye(2,2, CV_32FC1);
+	fromHomogeneous(triangPt, X);
 }
 
 void Odometry::sharedMatches(const vector<DMatch> &m1,
@@ -176,5 +176,20 @@ void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
 	{
 		gk1.push_back(k1[it->queryIdx].pt);
 		gk2.push_back(k2[it->trainIdx].pt);
+	}
+}
+
+void Odometry::fromHomogeneous(const Mat &Pt4f, vector<Point3f> &Pt3f)
+{
+	int N = Pt4f.cols; // Number of 4-channel elements
+	float x, y, z, w;
+	for(int i = 0; i < N; i++)
+	{
+		// Convert the points to Euclidean space
+		w = Pt4f.at<float>(3, i);
+		z = Pt4f.at<float>(2, i) / w;
+		y = Pt4f.at<float>(1, i) / w;
+		x = Pt4f.at<float>(0, i) / w;
+		Pt3f.push_back(Point3f(x, y, z));
 	}
 }

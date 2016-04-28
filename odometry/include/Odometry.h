@@ -65,7 +65,7 @@ private:
 
 	void triangulate(const std::vector<cv::Point2f> &x,
 					 const std::vector<cv::Point2f> &xp,
-					 cv::Mat &X);
+					 std::vector<cv::Point3f> &X);
 
 	void sharedMatches(const std::vector<cv::DMatch> &m1,
 					   const std::vector<cv::DMatch> &m2,
@@ -77,6 +77,8 @@ private:
 						std::vector<cv::Point2f> &gk1,
 						std::vector<cv::Point2f> &gk2,
 						const std::vector<cv::DMatch> &mask);
+
+	void fromHomogeneous(const cv::Mat &Pt4f, std::vector<cv::Point3f> &Pt3f);
 
 	// Paramters used
 	parameters param;
@@ -90,7 +92,7 @@ private:
 	std::vector<cv::Point2f> goodF1Key, goodF2Key, goodF3Key;
 
 	//std::vector<cv::Point3d> worldPoints;
-	cv::Mat worldPoints;
+	std::vector<cv::Point3f> worldPoints;
 
 	Matcher *mainMatcher;
 
