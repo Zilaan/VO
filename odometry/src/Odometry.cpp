@@ -68,7 +68,13 @@ void Odometry::process(const Mat &image)
 		// Compute motion only if matches are getting to few
 		if(matches13.size() < 100 || matches23.size() < 200)
 		{
+			sharedMatches(matches12, matches23,
+						  sharedMatches12, sharedMatches23);
+
+			sharedFeatures(f2Keypoints, f3Keypoints,
+						   goodF2Key, goodF3Key, matches23);
 			// Triangulate()
+			triangulate(goodF2Key, goodF3Key, worldPoints);
 			// P3P()
 			swapAll();
 			cout << "		Motion" << endl;
@@ -127,11 +133,13 @@ void Odometry::swapAll()
 	cM = pM.clone();
 }
 
-void Odometry::triangulate(const vector<KeyPoint> &x,
-						   const vector<KeyPoint> &xp,
+void Odometry::triangulate(const Mat &x,
+						   const Mat &xp,
 						   vector<Point3d> &X)
 {
-	Mat triang4D, Rt; // Triangulated 4D points
+	int N = x.cols;
+	Mat triang4D(1, N, CV_64F);
+	Mat Rt; // Triangulated 4D points
 
 	// Compute the current projection matrix
 	hconcat(R, t, Rt);
@@ -139,7 +147,8 @@ void Odometry::triangulate(const vector<KeyPoint> &x,
 
 	// Triangulate points to 4D
 	triangulatePoints(pM, cM, x, xp, triang4D);
-
+	cout << "Triang comp " << endl;
+	cout << triang4D.size() << endl;
 	// Convert to 3D
 	convertPointsHomogeneous(triang4D, X);
 }
@@ -161,5 +170,26 @@ void Odometry::sharedMatches(const vector<DMatch> &m1,
 				break;
 			}
 		}
+	}
+}
+
+void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
+							  const vector<KeyPoint> &k2,
+							  Mat &gk1, Mat &gk2,
+							  const vector<DMatch> &mask)
+{
+	int N = mask.size();
+	int n = 0;
+	gk1 = Mat(2, N, CV_64F);
+	gk2 = Mat(2, N, CV_64F);
+	vector<DMatch>::const_iterator it;
+	for(it = mask.end(); it != mask.end(); ++it)
+	{
+		gk1.at<double>(1, n) = k1[it->queryIdx].pt.x;
+		gk1.at<double>(2, n) = k1[it->queryIdx].pt.y;
+
+		gk2.at<double>(1, n) = k2[it->trainIdx].pt.x;
+		gk2.at<double>(2, n) = k2[it->trainIdx].pt.y;
+		n++;
 	}
 }

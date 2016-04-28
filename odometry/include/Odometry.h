@@ -63,14 +63,19 @@ private:
 
 	void swapAll();
 
-	void triangulate(const std::vector<cv::KeyPoint> &x,
-					 const std::vector<cv::KeyPoint> &xp,
+	void triangulate(const cv::Mat &x,
+					 const cv::Mat &xp,
 					 std::vector<cv::Point3d> &X);
 
 	void sharedMatches(const std::vector<cv::DMatch> &m1,
 					   const std::vector<cv::DMatch> &m2,
 					   std::vector<cv::DMatch> &shared1,
 					   std::vector<cv::DMatch> &shared2);
+
+	void sharedFeatures(const std::vector<cv::KeyPoint> &k1,
+						const std::vector<cv::KeyPoint> &k2,
+						cv::Mat &gk1, cv::Mat &gk2,
+						const std::vector<cv::DMatch> &mask);
 
 	// Paramters used
 	parameters param;
@@ -80,6 +85,9 @@ private:
 	cv::Mat t;
 	cv::Mat pM;
 	cv::Mat cM;
+	cv::Mat goodF1Key, goodF2Key, goodF3Key;
+
+	std::vector<cv::Point3d> worldPoints;
 
 	Matcher *mainMatcher;
 
@@ -96,9 +104,9 @@ private:
 	std::vector<cv::KeyPoint> f1Keypoints;
 	std::vector<cv::KeyPoint> f2Keypoints;
 	std::vector<cv::KeyPoint> f3Keypoints;
-	std::vector<cv::KeyPoint> goodF1;
-	std::vector<cv::KeyPoint> goodF2;
-	std::vector<cv::KeyPoint> goodF3;
+	//std::vector<cv::KeyPoint> goodF1;
+	//std::vector<cv::KeyPoint> goodF2;
+	//std::vector<cv::KeyPoint> goodF3;
 	int frameNr;
 };
 
