@@ -63,9 +63,9 @@ private:
 
 	void swapAll();
 
-	void triangulate(const std::vector<cv::KeyPoint> &x,
-					 const std::vector<cv::KeyPoint> &xp,
-					 std::vector<cv::Point3d> &X);
+	void triangulate(const std::vector<cv::Point2f> &x,
+					 const std::vector<cv::Point2f> &xp,
+					 std::vector<cv::Point3f> &X);
 
 	void sharedMatches(const std::vector<cv::DMatch> &m1,
 					   const std::vector<cv::DMatch> &m2,
@@ -76,33 +76,51 @@ private:
 			 const std::vector<cv::KeyPoint> &keypoints,
 			 const std::vector<cv::DMatch> &goodMatches);
 
-	// Paramters used
-	parameters param;
-	cv::Mat K;
-	cv::Mat E;
-	cv::Mat R;
-	cv::Mat t;
-	cv::Mat pM;
-	cv::Mat cM;
+	void sharedFeatures(const std::vector<cv::KeyPoint> &k1,
+						const std::vector<cv::KeyPoint> &k2,
+						std::vector<cv::Point2f> &gk1,
+						std::vector<cv::Point2f> &gk2,
+						const std::vector<cv::DMatch> &mask);
 
+	void fromHomogeneous(const cv::Mat &Pt4f, std::vector<cv::Point3f> &Pt3f);
+
+	// Matcher object
 	Matcher *mainMatcher;
 
+	// Paramters used
+	parameters param;
+
+	cv::Mat K;  // Intrisic parameters for camera
+	cv::Mat E;  // Essential matrix
+	cv::Mat R;  // Rotation matrix
+	cv::Mat t;  // Translation vector
+	cv::Mat pM; // Previous projection matrix
+	cv::Mat cM; // Current projection matrix
+
+	// Keypoints filtered with shared matches
+	std::vector<cv::Point2f> goodF1Key, goodF2Key, goodF3Key;
+
+	// Triangulated Euclidean points
+	std::vector<cv::Point3f> worldPoints;
+
+	// Descriptors from the three frames
 	cv::Mat f1Descriptors;
 	cv::Mat f2Descriptors;
 	cv::Mat f3Descriptors;
 
+	// Matches from three frames
 	std::vector<cv::DMatch> matches12;
 	std::vector<cv::DMatch> matches13;
 	std::vector<cv::DMatch> matches23;
+
+	// Shared matches
 	std::vector<cv::DMatch> sharedMatches12;
 	std::vector<cv::DMatch> sharedMatches23;
 
+	// Keypoints from the three frames
 	std::vector<cv::KeyPoint> f1Keypoints;
 	std::vector<cv::KeyPoint> f2Keypoints;
 	std::vector<cv::KeyPoint> f3Keypoints;
-	std::vector<cv::KeyPoint> goodF1;
-	std::vector<cv::KeyPoint> goodF2;
-	std::vector<cv::KeyPoint> goodF3;
 
 	std::vector<cv::Point3d> X12;
 	std::vector<cv::Point3d> X13;

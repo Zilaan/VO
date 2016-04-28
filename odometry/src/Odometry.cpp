@@ -50,7 +50,6 @@ void Odometry::process(const Mat &image)
 		// and compute pose using Nister's five point
 		mainMatcher->computeDescriptors(image, f2Descriptors, f2Keypoints);
 		mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12);
-		fprintf(stdout, "1-2 matches: %lu\n", matches12.size());
 		// 5point()
 		fivePoint(f1Keypoints, f2Keypoints, matches12);
 		// Triangulate()
@@ -61,21 +60,23 @@ void Odometry::process(const Mat &image)
 		mainMatcher->computeDescriptors(image, f3Descriptors, f3Keypoints);
 		mainMatcher->fastMatcher(f1Descriptors, f3Descriptors, matches13);
 		mainMatcher->fastMatcher(f2Descriptors, f3Descriptors, matches23);
-		fprintf(stdout, "1-3 matches: %lu\n", matches13.size());
-		fprintf(stdout, "2-3 matches: %lu\n\n", matches23.size());
 
 		// Compute motion only if matches are getting to few
 		if(matches13.size() < 100 || matches23.size() < 200)
 		{
+			sharedMatches(matches12, matches23,
+						  sharedMatches12, sharedMatches23);
+
+			sharedFeatures(f2Keypoints, f3Keypoints,
+						   goodF2Key, goodF3Key, sharedMatches23);
+
 			// Triangulate()
-			triangulate(f1Keypoints, f2Keypoints, X12);
+			triangulate(goodF2Key, goodF3Key, worldPoints);
 			// P3P()
 			swapAll();
-			cout << "		Motion" << endl;
 		}
 		else
 		{
-			cout << "		No Motion" << endl;
 		}
 	}
 	frameNr++;
@@ -89,7 +90,6 @@ void Odometry::fivePoint(const vector<KeyPoint> &x,
 	vector<Point2f> matchedPoints;
 	vector<Point2f> matchedPointsPrime;
 
-	//cout << "size: " << x.size() << endl;
 
 	// Copy only matched keypoints
 	vector<DMatch>::iterator it;
@@ -127,23 +127,21 @@ void Odometry::swapAll()
 	pM = cM.clone();
 }
 
-void Odometry::triangulate(const vector<KeyPoint> &x,
-						   const vector<KeyPoint> &xp,
-						   vector<Point3d> &X)
+void Odometry::triangulate(const vector<Point2f> &x,
+						   const vector<Point2f> &xp,
+						   vector<Point3f> &X)
 {
-	Mat triang4D, Rt; // Triangulated 4D points
+	Mat triangPt(4, x.size(), CV_32FC1);
+	Mat Rt;
 
 	// Compute the current projection matrix
 	hconcat(R, t, Rt);
 	cM = K * Rt;
 
 	// Triangulate points to 4D
-	triangulatePoints(pM, cM, x, xp, triang4D);
+	triangulatePoints(pM, cM, x, xp, triangPt);
 
-	// Convert to 3D
-	convertPointsHomogeneous(triang4D, X);
-	cout << x.size() << endl;
-	cout << xp.size() << endl;
+	fromHomogeneous(triangPt, X);
 }
 
 void Odometry::sharedMatches(const vector<DMatch> &m1,
@@ -166,9 +164,31 @@ void Odometry::sharedMatches(const vector<DMatch> &m1,
 	}
 }
 
-void Odometry::pnp(const vector<Point3d> &X,
-				   const vector<KeyPoint> &keypoints,
-				   const vector<DMatch> &goodMatches)
+void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
+							  const vector<KeyPoint> &k2,
+							  vector<Point2f> &gk1,
+							  vector<Point2f> &gk2,
+							  const vector<DMatch> &mask)
 {
-	;
+	vector<DMatch>::const_iterator it;
+	for(it = mask.begin(); it != mask.end(); ++it)
+	{
+		gk1.push_back(k1[it->queryIdx].pt);
+		gk2.push_back(k2[it->trainIdx].pt);
+	}
+}
+
+void Odometry::fromHomogeneous(const Mat &Pt4f, vector<Point3f> &Pt3f)
+{
+	int N = Pt4f.cols; // Number of 4-channel elements
+	float x, y, z, w;
+	for(int i = 0; i < N; i++)
+	{
+		// Convert the points to Euclidean space
+		w = Pt4f.at<float>(3, i);
+		z = Pt4f.at<float>(2, i) / w;
+		y = Pt4f.at<float>(1, i) / w;
+		x = Pt4f.at<float>(0, i) / w;
+		Pt3f.push_back(Point3f(x, y, z));
+	}
 }
