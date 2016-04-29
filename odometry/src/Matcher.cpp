@@ -2,6 +2,9 @@
 #include <time.h>
 #include <opencv2/features2d/features2d.hpp>
 
+using namespace std;
+using namespace cv;
+
 Matcher::Matcher(parameters param) : _ratio(0.8f)
 {
 	// Use ORB as default detector
@@ -18,9 +21,9 @@ Matcher::~Matcher()
 {
 }
 
-void Matcher::computeDescriptors(const Mat &image, Mat &descriptors)
+void Matcher::computeDescriptors(const Mat &image, Mat &descriptors,
+								 vector<KeyPoint> &keypoints)
 {
-	vector<KeyPoint> keypoints;
 	_detector->detect(image, keypoints);
 	_descriptor->compute(image, keypoints, descriptors);
 }
