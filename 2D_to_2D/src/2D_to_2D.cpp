@@ -67,12 +67,13 @@ int main( int argc, char** argv )
 		
 		sequence >> img;
 		
-		if ( img.empty() || j == i )
+		if ( img.empty() || j == i ) 
 		{
 			cout << "Sequence finished" << endl;
 			break;
 		}
 				
+		//First image 
 		if ( j == 0 )
 		{
 			match.fastMatcher( img, prev_keypoints, prev_descriptors );
@@ -106,22 +107,30 @@ int main( int argc, char** argv )
 		vector<Point2f> prev_matched_keypoints;
 		vector<Point2f> curr_matched_keypoints;
 		cout << good_matches.size() << endl;
-			
+		
+		//Extract the matching points in previous and current image
 		for ( vector<DMatch>::iterator it = good_matches.begin(); it != good_matches.end(); ++it )
 		{
 			prev_matched_keypoints.push_back(prev_keypoints[it->queryIdx].pt);
 			curr_matched_keypoints.push_back(curr_keypoints[it->trainIdx].pt);
 		}
 		cout << prev_matched_keypoints.size() << "    " << curr_matched_keypoints.size() << endl;
+		
+		//Compute Essential matrix
 		Mat E = findEssentialMat(	prev_matched_keypoints, curr_matched_keypoints,
 						cameraMatrix, RANSAC, 0.999, 1.0, noArray() );
 		Point2d pp(cam_par.cu, cam_par.cv);
 		
-		Mat R; Mat t; Mat mask;
-		recoverPose( E, prev_matched_keypoints, curr_matched_keypoints, R, t, cam_par.f, pp, mask );
+		Mat R; Mat t;
 
-		cout << "R: " << R << " t: " << t << endl;
-		
+		//Recover camera pose
+		//recoverPose( 		E, prev_matched_keypoints, curr_matched_keypoints, 
+					//R, t, cam_par.f, pp, mask );
+
+		recoverPose( 		E, prev_matched_keypoints, curr_matched_keypoints,
+					cameraMatrix, R, t, noArray() );		
+
+		cout << "R: " << R << endl << " t: " << t << endl;
 		//Mat R1; Mat R2; Mat t;
 		//decomposeEssentialMat( 		E,R1,R2,t);
 			
