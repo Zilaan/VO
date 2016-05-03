@@ -6,25 +6,25 @@
 
 using namespace std;
 
-float sigma_h(vector<Point3f> q)//Change T to proper type!*!*!*!*!*!*!*!*!*!
+float sigma_h(vector<Point3f> q)//Function to calculate sigma_h for the skewed Gaussian kernel
 {
         vector<float> res;
         if ( q.empty() ) return 0;
         else    {
                 for ( vector<Point3f>::iterator it = q.begin(); it != q.end(); ++it )
                 {
-                        res.push_back( sqrt( pow( it->x, 2  ) + pow ( it->y, 2 ) + pow ( it->z, 2 )) );//not sure if pt.y
+                        res.push_back( sqrt( pow( it->x, 2  ) + pow ( it->y, 2 ) + pow ( it->z, 2 )) );
                 }
 
                 if ( res.size() % 2 == 0 )
                         return ( 0.01 * (res[res.size()/2 - 1] + res[res.size()/2]) );
                 else
-                        return ( 0.01 * res[res.size()] );
+                        return ( 0.02 * res[res.size()/2] );
         }
 }
 
 
-float skew_gauss_kernel(float height, vector<Point3f> xyz)
+float skew_gauss_kernel(float height, vector<Point3f> xyz)//function to estimate the height of the camera
 {
         float sig_h = sigma_h( xyz );
         vector<float> val;
@@ -41,4 +41,3 @@ float skew_gauss_kernel(float height, vector<Point3f> xyz)
 
         return *pos;
 }
-
