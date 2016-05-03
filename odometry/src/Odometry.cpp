@@ -54,7 +54,9 @@ void Odometry::process(const Mat &image)
 		mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12);
 		// 5point()
 		fivePoint(f1Keypoints, f2Keypoints, matches12);
-		// Triangulate()
+
+		// Update transformation matrix
+		computeTransformation();
 	}
 	else
 	{
@@ -75,6 +77,9 @@ void Odometry::process(const Mat &image)
 			triangulate(goodF2Key, goodF3Key, worldPoints);
 
 			pnp(worldPoints, goodF3Key);
+
+			// Update transformation matrix
+			computeTransformation();
 
 			swapAll();
 		}
@@ -116,8 +121,6 @@ void Odometry::fivePoint(const vector<KeyPoint> &x,
 	recoverPose(E, matchedPoints, matchedPointsPrime, K, R, t, inliers);
 
 	// Update projection matrix
-	pM.release();
-	pM = cM.clone(); // Swap projection matrices
 	computeProjection();
 }
 
@@ -195,6 +198,8 @@ void Odometry::pnp(const vector<Point3f> &X,
 	t = tvec;
 
 	// Update projection matrix
+	pM.release();
+	pM = cM.clone();
 	computeProjection();
 }
 
