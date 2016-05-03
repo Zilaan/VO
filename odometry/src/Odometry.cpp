@@ -25,6 +25,8 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	t = Mat::zeros(3, 1, CV_64F);
 	hconcat(R, t, Rt);
 	pM = K * Rt;
+
+	Tr = Mat::ones(4, 4, CV_64FC1);
 }
 
 Odometry::~Odometry()
@@ -224,5 +226,16 @@ void Odometry::fromHomogeneous(const Mat &Pt4f, vector<Point3f> &Pt3f)
 		y = Pt4f.at<float>(1, i) / w;
 		x = Pt4f.at<float>(0, i) / w;
 		Pt3f.push_back(Point3f(x, y, z));
+	}
+}
+
+void Odometry::computeTransformation()
+{
+	for(int r = 0; r < cM.rows; r++)
+	{
+		for(int c = 0; c < cM.cols; c++)
+		{
+			Tr.at<double>(r, c) = cM.at<double>(r, c);
+		}
 	}
 }

@@ -86,6 +86,8 @@ private:
 
 	void fromHomogeneous(const cv::Mat &Pt4f, std::vector<cv::Point3f> &Pt3f);
 
+	void computeTransformation();
+
 	// Matcher object
 	Matcher *mainMatcher;
 
@@ -98,6 +100,7 @@ private:
 	cv::Mat t;  // Translation vector
 	cv::Mat pM; // Previous projection matrix
 	cv::Mat cM; // Current projection matrix
+	cv::Mat Tr; // Previous and current trans matrix
 
 	// Keypoints filtered with shared matches
 	std::vector<cv::Point2f> goodF1Key, goodF2Key, goodF3Key;
