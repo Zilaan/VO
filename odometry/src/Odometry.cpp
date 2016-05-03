@@ -114,6 +114,11 @@ void Odometry::fivePoint(const vector<KeyPoint> &x,
 
 	// Recover R and t from E
 	recoverPose(E, matchedPoints, matchedPointsPrime, K, R, t, inliers);
+
+	// Update projection matrix
+	pM.release();
+	pM = cM.clone(); // Swap projection matrices
+	computeProjection();
 }
 
 void Odometry::swapAll()
@@ -135,8 +140,6 @@ void Odometry::swapAll()
 	sharedMatches12.clear();
 	sharedMatches12 = sharedMatches23;
 
-	// Swap projection matrices
-	pM = cM.clone();
 }
 
 void Odometry::triangulate(const vector<Point2f> &x,
@@ -144,11 +147,6 @@ void Odometry::triangulate(const vector<Point2f> &x,
 						   vector<Point3f> &X)
 {
 	Mat triangPt(4, x.size(), CV_32FC1);
-	Mat Rt;
-
-	// Compute the current projection matrix
-	hconcat(R, t, Rt);
-	cM = K * Rt;
 
 	// Triangulate points to 4D
 	triangulatePoints(pM, cM, x, xp, triangPt);
@@ -195,6 +193,9 @@ void Odometry::pnp(const vector<Point3f> &X,
 
 	Rodrigues(rvec, R); // Convert rotation vector to matrix
 	t = tvec;
+
+	// Update projection matrix
+	computeProjection();
 }
 
 void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
@@ -238,4 +239,13 @@ void Odometry::computeTransformation()
 			Tr.at<double>(r, c) = cM.at<double>(r, c);
 		}
 	}
+}
+
+void Odometry::computeProjection()
+{
+	Mat Rt;
+
+	// Compute the current projection matrix
+	hconcat(R, t, Rt);
+	cM = K * Rt;
 }

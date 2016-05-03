@@ -93,6 +93,8 @@ private:
 
 	void computeTransformation();
 
+	void computeProjection();
+
 	// Matcher object
 	Matcher *mainMatcher;
 
