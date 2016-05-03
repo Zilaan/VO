@@ -58,6 +58,11 @@ public:
 
 	void process(const cv::Mat &image);
 
+	cv::Mat getMotion()
+	{
+		return Tr;
+	}
+
 private:
 	// Estimate motion
 	void fivePoint(const std::vector<cv::KeyPoint> &x,

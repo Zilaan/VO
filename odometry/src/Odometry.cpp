@@ -26,7 +26,7 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	hconcat(R, t, Rt);
 	pM = K * Rt;
 
-	Tr = Mat::ones(4, 4, CV_64FC1);
+	Tr = Mat::eye(4, 4, CV_64FC1);
 }
 
 Odometry::~Odometry()
