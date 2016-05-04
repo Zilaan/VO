@@ -2,6 +2,7 @@
 #include <ctime>
 #include "Odometry.h"
 #include "Matcher.h"
+#include "Scale.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
@@ -25,6 +26,8 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	t = Mat::zeros(3, 1, CV_64F);
 	hconcat(R, t, Rt);
 	pM = K * Rt;
+
+	Tr = Mat::eye(4, 4, CV_64FC1);
 }
 
 Odometry::~Odometry()
@@ -52,7 +55,9 @@ void Odometry::process(const Mat &image)
 		mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12);
 		// 5point()
 		fivePoint(f1Keypoints, f2Keypoints, matches12);
-		// Triangulate()
+
+		// Update transformation matrix
+		computeTransformation();
 	}
 	else
 	{
@@ -74,6 +79,11 @@ void Odometry::process(const Mat &image)
 
 			pnp(worldPoints, goodF3Key);
 
+			correctScale(worldPoints);
+
+			// Update transformation matrix
+			computeTransformation();
+
 			swapAll();
 		}
 		else
@@ -94,8 +104,8 @@ void Odometry::fivePoint(const vector<KeyPoint> &x,
 						 vector<DMatch> &matches)
 {
 	Mat inliers;
-	vector<Point2f> matchedPoints;
-	vector<Point2f> matchedPointsPrime;
+	vector<Point2d> matchedPoints;
+	vector<Point2d> matchedPointsPrime;
 
 
 	// Copy only matched keypoints
@@ -112,6 +122,9 @@ void Odometry::fivePoint(const vector<KeyPoint> &x,
 
 	// Recover R and t from E
 	recoverPose(E, matchedPoints, matchedPointsPrime, K, R, t, inliers);
+
+	// Update projection matrix
+	computeProjection();
 }
 
 void Odometry::swapAll()
@@ -133,20 +146,13 @@ void Odometry::swapAll()
 	sharedMatches12.clear();
 	sharedMatches12 = sharedMatches23;
 
-	// Swap projection matrices
-	pM = cM.clone();
 }
 
-void Odometry::triangulate(const vector<Point2f> &x,
-						   const vector<Point2f> &xp,
-						   vector<Point3f> &X)
+void Odometry::triangulate(const vector<Point2d> &x,
+						   const vector<Point2d> &xp,
+						   vector<Point3d> &X)
 {
-	Mat triangPt(4, x.size(), CV_32FC1);
-	Mat Rt;
-
-	// Compute the current projection matrix
-	hconcat(R, t, Rt);
-	cM = K * Rt;
+	Mat triangPt(4, x.size(), CV_64FC1);
 
 	// Triangulate points to 4D
 	triangulatePoints(pM, cM, x, xp, triangPt);
@@ -176,8 +182,8 @@ void Odometry::sharedMatches(const vector<DMatch> &m1,
 	}
 }
 
-void Odometry::pnp(const vector<Point3f> &X,
-				   const vector<Point2f> &x)
+void Odometry::pnp(const vector<Point3d> &X,
+				   const vector<Point2d> &x)
 {
 	Mat distCoeffs = Mat::zeros(4, 1, CV_64FC1);  // vector of distortion coefficients
 	Mat rvec = Mat::zeros(3, 1, CV_64FC1); // output rotation vector
@@ -193,12 +199,17 @@ void Odometry::pnp(const vector<Point3f> &X,
 
 	Rodrigues(rvec, R); // Convert rotation vector to matrix
 	t = tvec;
+
+	// Update projection matrix
+	pM.release();
+	pM = cM.clone();
+	computeProjection();
 }
 
 void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
 							  const vector<KeyPoint> &k2,
-							  vector<Point2f> &gk1,
-							  vector<Point2f> &gk2,
+							  vector<Point2d> &gk1,
+							  vector<Point2d> &gk2,
 							  const vector<DMatch> &mask)
 {
 	gk1.clear();
@@ -211,18 +222,52 @@ void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
 	}
 }
 
-void Odometry::fromHomogeneous(const Mat &Pt4f, vector<Point3f> &Pt3f)
+void Odometry::fromHomogeneous(const Mat &Pt4f, vector<Point3d> &Pt3f)
 {
 	Pt3f.clear();
 	int N = Pt4f.cols; // Number of 4-channel elements
-	float x, y, z, w;
+	double x, y, z, w;
 	for(int i = 0; i < N; i++)
 	{
 		// Convert the points to Euclidean space
-		w = Pt4f.at<float>(3, i);
-		z = Pt4f.at<float>(2, i) / w;
-		y = Pt4f.at<float>(1, i) / w;
-		x = Pt4f.at<float>(0, i) / w;
-		Pt3f.push_back(Point3f(x, y, z));
+		w = Pt4f.at<double>(3, i);
+		z = Pt4f.at<double>(2, i) / w;
+		y = Pt4f.at<double>(1, i) / w;
+		x = Pt4f.at<double>(0, i) / w;
+		Pt3f.push_back(Point3d(x, y, z));
 	}
+}
+
+void Odometry::computeTransformation()
+{
+	for(int r = 0; r < cM.rows; r++)
+	{
+		for(int c = 0; c < cM.cols; c++)
+		{
+			Tr.at<double>(r, c) = cM.at<double>(r, c);
+		}
+	}
+}
+
+void Odometry::computeProjection()
+{
+	Mat Rt;
+
+	// Compute the current projection matrix
+	hconcat(R, t, Rt);
+	cM = K * Rt;
+}
+
+void Odometry::correctScale(vector<Point3d> &points)
+{
+	double trueHeight = param.odParam.cameraHeight;
+
+	// Compute estimated height
+	double estHeight = gaussKernel(trueHeight, points);
+
+	// Compute the scaling factor
+	double rho = trueHeight / estHeight;
+
+	t = t * rho;
+
 }
