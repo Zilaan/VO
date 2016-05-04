@@ -4,8 +4,8 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
-double sigma(std::vector<cv::Point3f> points);
+double sigma(std::vector<cv::Point3d> points);
 
-double gaussKernel(double height, std::vector<cv::Point3f> xyz);
+double gaussKernel(double height, std::vector<cv::Point3d> xyz);
 
 #endif // SCALE_H

@@ -11,13 +11,13 @@ using namespace std;
 using namespace cv;
 
 //Function to calculate sigma_h for the skewed Gaussian kernel
-double sigma(vector<Point3f> points)
+double sigma(vector<Point3d> points)
 {
 	vector<double> res;
 	if ( points.empty() ) return 0;
 	else
 	{
-		for ( vector<Point3f>::iterator it = points.begin(); it != points.end(); ++it )
+		for ( vector<Point3d>::iterator it = points.begin(); it != points.end(); ++it )
 		{
 			res.push_back( sqrt( pow( it->x, 2  ) + pow ( it->y, 2 ) + pow ( it->z, 2 )) );
 		}
@@ -30,13 +30,13 @@ double sigma(vector<Point3f> points)
 }
 
 //function to estimate the height of the camera
-double gaussKernel(double height, vector<Point3f> xyz)
+double gaussKernel(double height, vector<Point3d> xyz)
 {
 	double sig_h = sigma( xyz );
 	vector<double> val;
 	vector<double>::iterator pos;
 
-	for( vector<Point3f>::iterator it = xyz.begin(); it != xyz.end(); ++it )
+	for( vector<Point3d>::iterator it = xyz.begin(); it != xyz.end(); ++it )
 	{
 		if ( height - it->y > 0)
 			val.push_back( exp( (-0.5 * pow( it->y, 2 ) ) / pow( sig_h, 2 ) ) );
