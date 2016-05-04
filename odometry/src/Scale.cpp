@@ -3,16 +3,18 @@
 #include <vector>
 #include <algorithm>
 #include <math.h>
+#include "Scale.h"
 
 using namespace std;
 
-float sigma_h(vector<Point3f> q)//Function to calculate sigma_h for the skewed Gaussian kernel
+//Function to calculate sigma_h for the skewed Gaussian kernel
+double sigma_h(vector<Point3f> points)
 {
-	vector<float> res;
-	if ( q.empty() ) return 0;
+	vector<double> res;
+	if ( points.empty() ) return 0;
 	else
 	{
-		for ( vector<Point3f>::iterator it = q.begin(); it != q.end(); ++it )
+		for ( vector<Point3f>::iterator it = points.begin(); it != points.end(); ++it )
 		{
 			res.push_back( sqrt( pow( it->x, 2  ) + pow ( it->y, 2 ) + pow ( it->z, 2 )) );
 		}
@@ -24,12 +26,12 @@ float sigma_h(vector<Point3f> q)//Function to calculate sigma_h for the skewed G
 	}
 }
 
-
-float skew_gauss_kernel(float height, vector<Point3f> xyz)//function to estimate the height of the camera
+//function to estimate the height of the camera
+double skew_gauss_kernel(vector<Point3f> xyz)
 {
-	float sig_h = sigma_h( xyz );
-	vector<float> val;
-	vector<float>::iterator pos;
+	double sig_h = sigma_h( xyz );
+	vector<double> val;
+	vector<double>::iterator pos;
 
 	for( vector<Point3f>::iterator it = xyz.begin(); it != xyz.end(); ++it )
 	{
