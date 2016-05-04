@@ -2,6 +2,7 @@
 #include <ctime>
 #include "Odometry.h"
 #include "Matcher.h"
+#include "Scale.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
@@ -149,7 +150,7 @@ void Odometry::triangulate(const vector<Point2f> &x,
 						   const vector<Point2f> &xp,
 						   vector<Point3f> &X)
 {
-	Mat triangPt(4, x.size(), CV_32FC1);
+	Mat triangPt(4, x.size(), CV_64FC1);
 
 	// Triangulate points to 4D
 	triangulatePoints(pM, cM, x, xp, triangPt);
@@ -223,14 +224,14 @@ void Odometry::fromHomogeneous(const Mat &Pt4f, vector<Point3f> &Pt3f)
 {
 	Pt3f.clear();
 	int N = Pt4f.cols; // Number of 4-channel elements
-	float x, y, z, w;
+	double x, y, z, w;
 	for(int i = 0; i < N; i++)
 	{
 		// Convert the points to Euclidean space
-		w = Pt4f.at<float>(3, i);
-		z = Pt4f.at<float>(2, i) / w;
-		y = Pt4f.at<float>(1, i) / w;
-		x = Pt4f.at<float>(0, i) / w;
+		w = Pt4f.at<double>(3, i);
+		z = Pt4f.at<double>(2, i) / w;
+		y = Pt4f.at<double>(1, i) / w;
+		x = Pt4f.at<double>(0, i) / w;
 		Pt3f.push_back(Point3f(x, y, z));
 	}
 }

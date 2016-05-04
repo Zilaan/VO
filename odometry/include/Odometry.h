@@ -17,15 +17,15 @@ public:
 		 */
 
 		// Intrinsic camera paramters
-		float f;
-		float cu;
-		float cv;
+		double f;
+		double cu;
+		double cv;
 
 		// Ransac parameters
 		int pnpFlags;
 		int ransacIterations;
-		float ransacError;
-		float ransacProb;
+		double ransacError;
+		double ransacProb;
 		odometryParameters()
 		{
 			/*
