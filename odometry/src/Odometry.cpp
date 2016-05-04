@@ -24,10 +24,12 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	Mat Rt;
 	R = Mat::eye(3, 3, CV_64F);
 	t = Mat::zeros(3, 1, CV_64F);
-	hconcat(R, t, Rt);
-	pM = K * Rt;
+	RFinal = R.clone();
+	tFinal = t.clone();
+	//hconcat(R, t, Rt);
+	//pM = K * Rt;
 
-	Tr = Mat::eye(4, 4, CV_64FC1);
+	//Tr = Mat::eye(4, 4, CV_64FC1);
 }
 
 Odometry::~Odometry()
@@ -47,54 +49,24 @@ void Odometry::process(const Mat &image)
 		// Frist frame, compute only keypoints and descriptors
 		mainMatcher->computeDescriptors(image, f1Descriptors, f1Keypoints);
 	}
-	else if(frameNr == 2)
+	else
 	{
 		// Second frame available, match features with previous frame
 		// and compute pose using Nister's five point
 		mainMatcher->computeDescriptors(image, f2Descriptors, f2Keypoints);
 		mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12);
+		cout << matches12.size() << endl;
 		// 5point()
 		fivePoint(f1Keypoints, f2Keypoints, matches12);
 
-		// Update transformation matrix
-		computeTransformation();
-	}
-	else
-	{
-		// For all other frames, match features with two other frames
-		mainMatcher->computeDescriptors(image, f3Descriptors, f3Keypoints);
-		mainMatcher->fastMatcher(f1Descriptors, f3Descriptors, matches13);
-		mainMatcher->fastMatcher(f2Descriptors, f3Descriptors, matches23);
+		tFinal = tFinal + RFinal * t;
+		RFinal = R * RFinal;
 
-		// Compute motion only if matches are getting to few
-		if(matches13.size() < 100 || matches23.size() < 200)
-		{
-			sharedMatches(matches12, matches23,
-						  sharedMatches12, sharedMatches23);
+		//fprintf(stdout, "X:%4.2f, Y:%4.2f, Z:%4.2f\n", tFinal.at<double>(0, 0), tFinal.at<double>(0, 1), tFinal.at<double>(0, 2));
 
-			sharedFeatures(f2Keypoints, f3Keypoints,
-						   goodF2Key, goodF3Key, sharedMatches23);
+		swapAll();
 
-			triangulate(goodF2Key, goodF3Key, worldPoints);
 
-			pnp(worldPoints, goodF3Key);
-
-			correctScale(worldPoints);
-
-			// Update transformation matrix
-			computeTransformation();
-
-			swapAll();
-		}
-		else
-		{
-			// Throw away last frame and clear variables related to it
-			f3Keypoints.clear();
-			matches13.clear();
-			matches23.clear();
-			sharedMatches23.clear();
-			goodF3Key.clear();
-		}
 	}
 	frameNr++;
 }
@@ -124,27 +96,27 @@ void Odometry::fivePoint(const vector<KeyPoint> &x,
 	recoverPose(E, matchedPoints, matchedPointsPrime, K, R, t, inliers);
 
 	// Update projection matrix
-	computeProjection();
+	//computeProjection();
 }
 
 void Odometry::swapAll()
 {
 	// Swap descriptors
 	f1Descriptors = f2Descriptors.clone();
-	f2Descriptors = f3Descriptors.clone();
+	//f2Descriptors = f3Descriptors.clone();
 
 	// Swap keypoints
 	f1Keypoints.clear();
 	f1Keypoints = f2Keypoints;
 	f2Keypoints.clear();
-	f2Keypoints = f3Keypoints;
+	//f2Keypoints = f3Keypoints;
 
 	// Swap matches
 	matches12.clear();
-	matches12 = matches23;
+	//matches12 = matches23;
 
-	sharedMatches12.clear();
-	sharedMatches12 = sharedMatches23;
+	//sharedMatches12.clear();
+	//sharedMatches12 = sharedMatches23;
 
 }
 

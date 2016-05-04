@@ -34,9 +34,9 @@ public:
 			 * parameters from above
 			 */
 
-			f  = 1;
-			cu = 0;
-			cv = 0;
+			f  = 645.2;
+			cu = 635.9;
+			cv = 194.1;
 			cameraHeight = 1.6;
 
 			pnpFlags         = cv::SOLVEPNP_P3P;
@@ -62,7 +62,7 @@ public:
 
 	cv::Mat getMotion()
 	{
-		return Tr;
+		return tFinal;
 	}
 
 private:
@@ -107,6 +107,8 @@ private:
 
 	cv::Mat K;  // Intrisic parameters for camera
 	cv::Mat E;  // Essential matrix
+	cv::Mat RFinal;  // Rotation matrix
+	cv::Mat tFinal;  // Translation vector
 	cv::Mat R;  // Rotation matrix
 	cv::Mat t;  // Translation vector
 	cv::Mat pM; // Previous projection matrix
