@@ -20,6 +20,7 @@ public:
 		double f;
 		double cu;
 		double cv;
+		double cameraHeight;
 
 		// Ransac parameters
 		int pnpFlags;
@@ -36,6 +37,7 @@ public:
 			f  = 1;
 			cu = 0;
 			cv = 0;
+			cameraHeight = 1.6;
 
 			pnpFlags         = cv::SOLVEPNP_P3P;
 			ransacIterations = 2000;
@@ -71,29 +73,31 @@ private:
 
 	void swapAll();
 
-	void triangulate(const std::vector<cv::Point2f> &x,
-					 const std::vector<cv::Point2f> &xp,
-					 std::vector<cv::Point3f> &X);
+	void triangulate(const std::vector<cv::Point2d> &x,
+					 const std::vector<cv::Point2d> &xp,
+					 std::vector<cv::Point3d> &X);
 
 	void sharedMatches(const std::vector<cv::DMatch> &m1,
 					   const std::vector<cv::DMatch> &m2,
 					   std::vector<cv::DMatch> &shared1,
 					   std::vector<cv::DMatch> &shared2);
 
-	void pnp(const std::vector<cv::Point3f> &X,
-			 const std::vector<cv::Point2f> &x);
+	void pnp(const std::vector<cv::Point3d> &X,
+			 const std::vector<cv::Point2d> &x);
 
 	void sharedFeatures(const std::vector<cv::KeyPoint> &k1,
 						const std::vector<cv::KeyPoint> &k2,
-						std::vector<cv::Point2f> &gk1,
-						std::vector<cv::Point2f> &gk2,
+						std::vector<cv::Point2d> &gk1,
+						std::vector<cv::Point2d> &gk2,
 						const std::vector<cv::DMatch> &mask);
 
-	void fromHomogeneous(const cv::Mat &Pt4f, std::vector<cv::Point3f> &Pt3f);
+	void fromHomogeneous(const cv::Mat &Pt4f, std::vector<cv::Point3d> &Pt3f);
 
 	void computeTransformation();
 
 	void computeProjection();
+
+	void correctScale(std::vector<cv::Point3d> &points);
 
 	// Matcher object
 	Matcher *mainMatcher;
@@ -110,10 +114,10 @@ private:
 	cv::Mat Tr; // Previous and current trans matrix
 
 	// Keypoints filtered with shared matches
-	std::vector<cv::Point2f> goodF1Key, goodF2Key, goodF3Key;
+	std::vector<cv::Point2d> goodF1Key, goodF2Key, goodF3Key;
 
 	// Triangulated Euclidean points
-	std::vector<cv::Point3f> worldPoints;
+	std::vector<cv::Point3d> worldPoints;
 
 	// Descriptors from the three frames
 	cv::Mat f1Descriptors;
