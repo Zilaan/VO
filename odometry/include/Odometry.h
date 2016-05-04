@@ -73,8 +73,8 @@ private:
 
 	void swapAll();
 
-	void triangulate(const std::vector<cv::Point2d> &x,
-					 const std::vector<cv::Point2d> &xp,
+	void triangulate(const std::vector<cv::Point2d> &xp,
+					 const std::vector<cv::Point2d> &x,
 					 std::vector<cv::Point3d> &X);
 
 	void sharedMatches(const std::vector<cv::DMatch> &m1,
@@ -143,6 +143,9 @@ private:
 	std::vector<cv::Point3d> X12;
 	std::vector<cv::Point3d> X13;
 	std::vector<cv::Point3d> X23;
+
+	std::vector<cv::Point2d> pMatchedPoints;
+	std::vector<cv::Point2d> cMatchedPoints;
 	int frameNr;
 };
 

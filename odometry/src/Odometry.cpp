@@ -14,7 +14,7 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	mainMatcher = new Matcher(param.maParam);
 
 	// Set the intrinsic camera paramters
-	K = Mat::eye(3, 3, CV_64F);
+	K = Mat::eye(3, 3, CV_64FC1);
 	K.at<double>(0, 0) = param.odParam.f;
 	K.at<double>(0, 2) = param.odParam.cu;
 	K.at<double>(1, 1) = param.odParam.f;
@@ -22,12 +22,12 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 
 	// Set the initial value of R, t and projection matrix
 	Mat Rt;
-	R = Mat::eye(3, 3, CV_64F);
-	t = Mat::zeros(3, 1, CV_64F);
+	R = Mat::eye(3, 3, CV_64FC1);
+	t = Mat::zeros(3, 1, CV_64FC1);
 	RFinal = R.clone();
 	tFinal = t.clone();
-	//hconcat(R, t, Rt);
-	//pM = K * Rt;
+	hconcat(R, t, Rt);
+	pM = K * Rt;
 
 	//Tr = Mat::eye(4, 4, CV_64FC1);
 }
@@ -55,9 +55,18 @@ void Odometry::process(const Mat &image)
 		// and compute pose using Nister's five point
 		mainMatcher->computeDescriptors(image, f2Descriptors, f2Keypoints);
 		mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12);
-		cout << matches12.size() << endl;
-		// 5point()
+
+		// Compute R and t
 		fivePoint(f1Keypoints, f2Keypoints, matches12);
+		
+		// Update projection matrix i.e. cM
+		computeProjection();
+
+		// Compute 3D points
+		triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
+
+		pM.release();
+		pM = cM.clone();
 
 		tFinal = tFinal + RFinal * t;
 		RFinal = R * RFinal;
@@ -71,32 +80,29 @@ void Odometry::process(const Mat &image)
 	frameNr++;
 }
 
-void Odometry::fivePoint(const vector<KeyPoint> &x,
-						 const vector<KeyPoint> &xp,
+void Odometry::fivePoint(const vector<KeyPoint> &xp,
+						 const vector<KeyPoint> &x,
 						 vector<DMatch> &matches)
 {
 	Mat inliers;
-	vector<Point2d> matchedPoints;
-	vector<Point2d> matchedPointsPrime;
 
+	pMatchedPoints.clear();
+	cMatchedPoints.clear();
 
 	// Copy only matched keypoints
 	vector<DMatch>::iterator it;
 	for(it = matches.begin(); it != matches.end(); ++it)
 	{
-		matchedPoints.push_back(x[it->queryIdx].pt);
-		matchedPointsPrime.push_back(xp[it->trainIdx].pt);
+		pMatchedPoints.push_back(xp[it->queryIdx].pt);
+		cMatchedPoints.push_back(x[it->trainIdx].pt);
 	}
 
-	E = findEssentialMat(matchedPoints, matchedPointsPrime,
+	E = findEssentialMat(pMatchedPoints, cMatchedPoints,
 						 K, RANSAC, param.odParam.ransacProb,
 						 param.odParam.ransacError, inliers);
 
 	// Recover R and t from E
-	recoverPose(E, matchedPoints, matchedPointsPrime, K, R, t, inliers);
-
-	// Update projection matrix
-	//computeProjection();
+	recoverPose(E, pMatchedPoints, cMatchedPoints, K, R, t, inliers);
 }
 
 void Odometry::swapAll()
@@ -120,14 +126,14 @@ void Odometry::swapAll()
 
 }
 
-void Odometry::triangulate(const vector<Point2d> &x,
-						   const vector<Point2d> &xp,
+void Odometry::triangulate(const vector<Point2d> &xp,
+						   const vector<Point2d> &x,
 						   vector<Point3d> &X)
 {
 	Mat triangPt(4, x.size(), CV_64FC1);
 
 	// Triangulate points to 4D
-	triangulatePoints(pM, cM, x, xp, triangPt);
+	triangulatePoints(pM, cM, xp, x, triangPt);
 
 	fromHomogeneous(triangPt, X);
 }
@@ -175,7 +181,6 @@ void Odometry::pnp(const vector<Point3d> &X,
 	// Update projection matrix
 	pM.release();
 	pM = cM.clone();
-	computeProjection();
 }
 
 void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
