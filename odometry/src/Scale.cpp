@@ -32,7 +32,7 @@ double sigma(vector<Point3f> points)
 //function to estimate the height of the camera
 double gaussKernel(double height, vector<Point3f> xyz)
 {
-	double sig_h = sigma_h( xyz );
+	double sig_h = sigma( xyz );
 	vector<double> val;
 	vector<double>::iterator pos;
 
