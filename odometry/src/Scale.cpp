@@ -3,12 +3,15 @@
 #include <vector>
 #include <algorithm>
 #include <math.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 #include "Scale.h"
 
 using namespace std;
+using namespace cv;
 
 //Function to calculate sigma_h for the skewed Gaussian kernel
-double sigma_h(vector<Point3f> points)
+double sigma(vector<Point3f> points)
 {
 	vector<double> res;
 	if ( points.empty() ) return 0;
@@ -27,7 +30,7 @@ double sigma_h(vector<Point3f> points)
 }
 
 //function to estimate the height of the camera
-double skew_gauss_kernel(vector<Point3f> xyz)
+double gaussKernel(double height, vector<Point3f> xyz)
 {
 	double sig_h = sigma_h( xyz );
 	vector<double> val;
