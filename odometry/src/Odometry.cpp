@@ -58,12 +58,15 @@ void Odometry::process(const Mat &image)
 
 		// Compute R and t
 		fivePoint(f1Keypoints, f2Keypoints, matches12);
-		
+
 		// Update projection matrix i.e. cM
 		computeProjection();
 
 		// Compute 3D points
 		triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
+
+		// Compute scale
+		correctScale(worldPoints);
 
 		pM.release();
 		pM = cM.clone();
@@ -245,6 +248,6 @@ void Odometry::correctScale(vector<Point3d> &points)
 	// Compute the scaling factor
 	double rho = trueHeight / estHeight;
 
-	t = t * rho;
-
+	fprintf(stdout, "estHeight:%4.2f\n", estHeight);
+	//t = t * rho;
 }
