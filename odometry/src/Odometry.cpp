@@ -152,7 +152,7 @@ void Odometry::triangulate(const vector<Point2d> &x,
 						   const vector<Point2d> &xp,
 						   vector<Point3d> &X)
 {
-	Mat triangPt(4, x.size(), CV_64FC1);
+	Mat triangPt(4, (uint32_t)x.size(), CV_64FC1);
 
 	// Triangulate points to 4D
 	triangulatePoints(pM, cM, x, xp, triangPt);
@@ -260,14 +260,18 @@ void Odometry::computeProjection()
 
 void Odometry::correctScale(vector<Point3d> &points)
 {
+	double pitch = param.odParam.pitch;
 	double trueHeight = param.odParam.cameraHeight;
 
 	// Compute estimated height
-	double estHeight = gaussKernel(trueHeight, points);
+	double estHeight;
 
 	// Compute the scaling factor
-	double rho = trueHeight / estHeight;
-
-	t = t * rho;
-
+	if(gaussKernel(pitch, points, estHeight))
+	{
+		double rho = trueHeight / estHeight;
+		t = t * rho;
+	}
+	else
+		t = t;
 }
