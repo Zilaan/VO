@@ -21,6 +21,7 @@ public:
 		double cu;
 		double cv;
 		double cameraHeight;
+		double pitch;
 
 		// Ransac parameters
 		int pnpFlags;
@@ -38,6 +39,7 @@ public:
 			cu = 0;
 			cv = 0;
 			cameraHeight = 1.6;
+			pitch = -0.08;
 
 			pnpFlags         = cv::SOLVEPNP_P3P;
 			ransacIterations = 2000;
