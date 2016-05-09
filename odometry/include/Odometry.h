@@ -114,6 +114,7 @@ private:
 	cv::Mat pM; // Previous projection matrix
 	cv::Mat cM; // Current projection matrix
 	cv::Mat Tr; // Previous and current trans matrix
+	double rho; // Scale factor
 
 	// Keypoints filtered with shared matches
 	std::vector<cv::Point2d> goodF1Key, goodF2Key, goodF3Key;

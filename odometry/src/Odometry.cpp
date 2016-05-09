@@ -28,6 +28,8 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	pM = K * Rt;
 
 	Tr = Mat::eye(4, 4, CV_64FC1);
+
+	rho = 1.0;
 }
 
 Odometry::~Odometry()
@@ -268,10 +270,8 @@ void Odometry::correctScale(vector<Point3d> &points)
 
 	// Compute the scaling factor
 	if(gaussKernel(pitch, points, estHeight))
-	{
-		double rho = trueHeight / estHeight;
-		t = t * rho;
-	}
-	else
-		t = t;
+		rho = trueHeight / estHeight;
+
+	cout << rho << endl;
+	t = t * rho;
 }
