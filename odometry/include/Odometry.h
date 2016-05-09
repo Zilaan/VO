@@ -58,7 +58,7 @@ public:
 	// Deconstructor
 	virtual ~Odometry();
 
-	void process(const cv::Mat &image);
+	bool process(const cv::Mat &image);
 
 	cv::Mat getMotion()
 	{

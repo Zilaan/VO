@@ -42,7 +42,7 @@ Odometry::~Odometry()
  * it should be implemented in the
  * constructor
  */
-void Odometry::process(const Mat &image)
+bool Odometry::process(const Mat &image)
 {
 	if(frameNr == 1)
 	{
@@ -81,6 +81,7 @@ void Odometry::process(const Mat &image)
 
 	}
 	frameNr++;
+	return true;
 }
 
 void Odometry::fivePoint(const vector<KeyPoint> &xp,
