@@ -50,10 +50,6 @@ bool sigma(vector<Point3d> &points, double &sig_h)
 bool gaussKernel(double &pitch, vector<Point3d> &xyz, double &estH)//function to estimate the height of the camera
 {
 	double sig_h;
-	sigma(xyz, sig_h);
-	double wP = 1.0 / (2.0 * sig_h * sig_h);
-	sig_h = 0.01 * sig_h;
-	double wM = 1.0 / (2.0 * sig_h * sig_h);
 
 	Mat normPoints, points; // N x 2
 	Mat temp = Mat::zeros(1, 2, CV_64FC1); // 1 x 2
@@ -73,6 +69,11 @@ bool gaussKernel(double &pitch, vector<Point3d> &xyz, double &estH)//function to
 
 	if(normPoints.rows < 10)
 		return false;
+
+	sigma(xyz, sig_h);
+	double wP = 1.0 / (2.0 * sig_h * sig_h);
+	sig_h = 0.01 * sig_h;
+	double wM = 1.0 / (2.0 * sig_h * sig_h);
 	
 	temp.release();
 	temp = Mat::zeros(2, 1, CV_64FC1); // 2 x 1
