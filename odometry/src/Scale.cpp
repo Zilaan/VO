@@ -22,21 +22,19 @@ template<class T> struct idx_cmp
 };
 
 //Function to calculate sigma_h for the skewed Gaussian kernel
-bool sigma(vector<Point3d> &points, double &sig_h)
+bool sigma(const Mat &points, double &sig_h)
 {
-	if(points.empty())
-		return false;
-	uint32_t N = (uint32_t)points.size();
+	uint32_t N = (uint32_t)points.rows;
 	vector<double> dist(N);
 	vector<uint32_t> idx(N);
 	double *d = &dist[0];
 	uint32_t *i = &idx[0];
-	Point3d *p = &points[0];
+	//Point3d *p = &points[0];
 	for(uint32_t n = 0; n < N; n++)
 	{
-		*(d++) = fabs(p->x) + fabs(p->y) + fabs(p->z);
+		*(d++) = fabs(points.at<double>(n, 0)) + fabs(points.at<double>(n, 1)) + 1;
 		*(i++) = n;
-		p++;
+		//p++;
 	}
 
 	sort(idx.begin(), idx.end(), idx_cmp<vector<double>&>(dist));
@@ -70,14 +68,14 @@ bool gaussKernel(double &pitch, vector<Point3d> &xyz, double &estH)//function to
 	if(normPoints.rows < 10)
 		return false;
 
-	sigma(xyz, sig_h);
+	sigma(normPoints, sig_h);
 	double wP = 1.0 / (2.0 * sig_h * sig_h);
 	sig_h = 0.01 * sig_h;
 	double wM = 1.0 / (2.0 * sig_h * sig_h);
 	
 	temp.release();
 	temp = Mat::zeros(2, 1, CV_64FC1); // 2 x 1
-	temp.at<double>(0, 0) = cos(pitch);
+	temp.at<double>(0, 0) = cos(-pitch);
 	temp.at<double>(0, 1) = sin(-pitch);
 
 	// Compute 'height' of all points
@@ -106,6 +104,6 @@ bool gaussKernel(double &pitch, vector<Point3d> &xyz, double &estH)//function to
 		}
 	}
 
-	estH = points.at<double>(bestIdx, 0);
+	estH = points.at<double>(bestIdx);
 	return true;
 }

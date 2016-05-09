@@ -4,7 +4,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
-bool sigma(std::vector<cv::Point3d> &points, double &sig_h);
+bool sigma(const cv::Mat &points, double &sig_h);
 
 bool gaussKernel(double &pitch, std::vector<cv::Point3d> &xyz, double &estH);
 
