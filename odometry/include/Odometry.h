@@ -21,6 +21,7 @@ public:
 		double cu;
 		double cv;
 		double cameraHeight;
+		double pitch;
 
 		// Ransac parameters
 		int pnpFlags;
@@ -38,6 +39,7 @@ public:
 			cu = 635.9;
 			cv = 194.1;
 			cameraHeight = 1.6;
+			pitch = -0.08;
 
 			pnpFlags         = cv::SOLVEPNP_P3P;
 			ransacIterations = 2000;
@@ -114,6 +116,7 @@ private:
 	cv::Mat pM; // Previous projection matrix
 	cv::Mat cM; // Current projection matrix
 	cv::Mat Tr; // Previous and current trans matrix
+	double rho; // Scale factor
 
 	// Keypoints filtered with shared matches
 	std::vector<cv::Point2d> goodF1Key, goodF2Key, goodF3Key;

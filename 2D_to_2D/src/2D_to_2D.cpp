@@ -14,17 +14,16 @@
 using namespace cv;
 using namespace std;
 
-typedef struct
-{
-	double f;
-	double cu;
-	double cv;
-	double height;
-	double pitch;
+typedef struct{
+	float f;
+	float cu;
+	float cv;
+	float height;
+	float pitch;
 }Camera_par;
 
 float sigma_h(vector<Point3f> q);
-float skew_gauss_kernel(float height, vector<Point3f> xyz);
+float gaussKernel(float pitch, vector<Point3f> xyz);
 void fromHomogeneous_2D(const Mat &Pt4f, vector<Point3f> &Pt3f);
 
 int main( int argc, char** argv )
@@ -42,16 +41,18 @@ int main( int argc, char** argv )
 							0, 0, 1);
 	Mat addMat = (Mat_<double>(1,4) << 		0,0,0,1);
 	Mat Rt = Mat::zeros(3,4,CV_64F);
-	Mat C = Mat::eye(4,4,CV_64F);
+//	Mat C = Mat::eye(4,4,CV_64F);
 	Mat R = Mat::eye(3, 3, CV_64F);
-	Mat t = Mat::zeros(3, 1, CV_64F);i
-	Mat pos = (Mat_<double>(1,3) << 		1)
+	Mat t = Mat::zeros(3, 1, CV_64F);
+	Mat tFinal = Mat::zeros(3,1,CV_64F);
+	Mat RFinal = Mat::eye(3,3,CV_64F);
+	Mat pos = (Mat_<double>(3,1) << 		0,0,cam_par.height);
 	hconcat(R, t, Rt);
 	Mat pM = cameraMatrix * Rt;
 	Matcher::parameters param;
 	int boxWidth = 100;
 	int boxHeight = 50;
-	float h_est,s;
+	double h_est,s;
 	
 	//Read image sequence from input arg
 	if ( argc != 2 && argc != 3 )
@@ -164,17 +165,26 @@ int main( int argc, char** argv )
 		triangulatePoints(pM, cM, prev_matched_keypoints, curr_matched_keypoints, triangPt);
 		fromHomogeneous_2D(triangPt, XYZ);
 		
-		h_est = skew_gauss_kernel(sigma_h(XYZ), XYZ);
+		h_est = gaussKernel(cam_par.pitch, XYZ);
 		s = h_est/cam_par.height;
 		
 		//Correct the scaling error
 		t = t/s;
+		cout << "SCALE: " << s << endl;
 		hconcat(R,t,Rt);
 		Rt.push_back(addMat);
-		//C = C*Rt.inv();
-		Mat C = -R.t()*t;
+		
+		//Update the motion
+		tFinal = (tFinal + RFinal*t);
+		RFinal = R*RFinal;
+		
+		//Extract position
+		Mat C = -RFinal.t()*tFinal;
+		pos.row(0) = pos.row(0) + C.row(0);
+		pos.row(1) = pos.row(1) + C.row(1);
+		pos.row(2) = pos.row(2) + C.row(2) - pos.row(2);
 
-		cout << "Camera position: " << endl  << C << endl;
+		cout << "Camera position: " << endl << "x: " << pos.row(0) << " y: " << pos.row(1) << endl << endl;
 		imshow("Matches", match_img);
 		waitKey(3000);//Set delay between images here (in ms)
 		j++;
@@ -194,9 +204,11 @@ float sigma_h(vector<Point3f> q)//Function to calculate sigma_h for the skewed G
         else    {
                 for ( vector<Point3f>::iterator it = q.begin(); it != q.end(); ++it )
                 {
-                        res.push_back( sqrt( pow( it->x, 2  ) + pow ( it->y, 2 ) + pow ( it->z, 2 )) );
+                        res.push_back( sqrt( pow( it->x, 2 ) + pow ( it->y, 2 ) + pow ( it->z, 2 ) ) );
                 }
-
+		
+		sort( res.begin(), res.end());
+		
                 if ( res.size() % 2 == 0 )
                         return ( 0.01 * (res[res.size()/2 - 1] + res[res.size()/2]) );
                 else
@@ -204,22 +216,31 @@ float sigma_h(vector<Point3f> q)//Function to calculate sigma_h for the skewed G
         }
 }
 
-
-float skew_gauss_kernel(float height, vector<Point3f> xyz)//function to estimate the height of the camera
+ float gaussKernel(float pitch, vector<Point3f> xyz)//function to estimate the height of the camera
 {
-        float sig_h = sigma_h( xyz );
-        vector<float> val;
+	float h, sig_h = sigma_h( xyz );
+        cout << "SIGMA_H: " << sig_h << endl;
+	vector<float> val;
         vector<float>::iterator pos;
-
-        for( vector<Point3f>::iterator it = xyz.begin(); it != xyz.end(); ++it )
-        {
-                if ( height - it->y > 0)
-                        val.push_back( exp( (-0.5*pow( it->y, 2 ) )/pow( sig_h, 2 ) ) );
-                else
-                        val.push_back( exp( (-0.5*pow( it->y,2 ) )/pow( sig_h*0.01, 2 ) ) );
-        }
+	for( vector<Point3f>::iterator it2 = xyz.begin(); it2 != xyz.end(); ++it2 )
+	{
+		h = it2->y * cos(pitch) - it2->z * sin(pitch);
+		//cout << "Calculated h: " << h << endl;
+        	for( vector<Point3f>::iterator it = xyz.begin(); it != xyz.end(); ++it )
+        	{
+			if ( it != it2 ){
+                		if ( h - it->y > 0)
+                        		val.push_back( exp( (-0.5*pow( h-it->y, 2 ) )/pow( sig_h, 2 ) ) );
+                		else
+                        		val.push_back( exp( (-0.5*pow( h-it->y,2 ) )/pow( sig_h*0.01, 2 ) ) );
+			}	
+		}
+	}
+	for (vector<float>::iterator it3 = val.begin(); it3 != val.end() ; ++it3) {
+		//cout << *it3 << endl;
+	}
         pos = max_element ( val.begin(), val.end() );
-
+	cout << "HEIGHT: " << *pos << endl;
         return *pos;
 }
 

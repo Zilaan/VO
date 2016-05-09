@@ -6,44 +6,105 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include "Scale.h"
+#include <stdint.h>
 
 using namespace std;
 using namespace cv;
 
-//Function to calculate sigma_h for the skewed Gaussian kernel
-double sigma(vector<Point3d> points)
+template<class T> struct idx_cmp
 {
-	vector<double> res;
-	if ( points.empty() ) return 0;
-	else
+	idx_cmp(const T arr) : arr(arr) {}
+	bool operator()(const size_t a, const size_t b) const
 	{
-		for ( vector<Point3d>::iterator it = points.begin(); it != points.end(); ++it )
-		{
-			res.push_back( sqrt( pow( it->x, 2  ) + pow ( it->y, 2 ) + pow ( it->z, 2 )) );
-		}
-
-		if ( res.size() % 2 == 0 )
-			return ( 0.01 * (res[res.size() / 2 - 1] + res[res.size() / 2]) );
-		else
-			return ( 0.02 * res[res.size() / 2] );
+		return arr[a] < arr[b];
 	}
+	const T arr;
+};
+
+//Function to calculate sigma_h for the skewed Gaussian kernel
+bool sigma(vector<Point3d> &points, double &sig_h)
+{
+	if(points.empty())
+		return false;
+	uint32_t N = (uint32_t)points.size();
+	vector<double> dist(N);
+	vector<uint32_t> idx(N);
+	double *d = &dist[0];
+	uint32_t *i = &idx[0];
+	Point3d *p = &points[0];
+	for(uint32_t n = 0; n < N; n++)
+	{
+		*(d++) = fabs(p->x) + fabs(p->y) + fabs(p->z);
+		*(i++) = n;
+		p++;
+	}
+
+	sort(idx.begin(), idx.end(), idx_cmp<vector<double>&>(dist));
+
+	// Get median
+	uint32_t num_elem_half = (uint32_t)idx.size() / 2;
+	sig_h = dist[idx[num_elem_half]] / 50;
+	return true;
 }
 
-//function to estimate the height of the camera
-double gaussKernel(double height, vector<Point3d> xyz)
+bool gaussKernel(double &pitch, vector<Point3d> &xyz, double &estH)//function to estimate the height of the camera
 {
-	double sig_h = sigma( xyz );
-	vector<double> val;
-	vector<double>::iterator pos;
+	double sig_h;
+	sigma(xyz, sig_h);
+	double wP = 1.0 / (2.0 * sig_h * sig_h);
+	sig_h = 0.01 * sig_h;
+	double wM = 1.0 / (2.0 * sig_h * sig_h);
 
-	for( vector<Point3d>::iterator it = xyz.begin(); it != xyz.end(); ++it )
+	Mat normPoints, points; // N x 2
+	Mat temp = Mat::zeros(1, 2, CV_64FC1); // 1 x 2
+
+	// Normlize and keep points above 'ground'
+	for(vector<Point3d>::iterator it = xyz.begin(); it != xyz.end(); ++it)
 	{
-		if ( height - it->y > 0)
-			val.push_back( exp( (-0.5 * pow( it->y, 2 ) ) / pow( sig_h, 2 ) ) );
-		else
-			val.push_back( exp( (-0.5 * pow( it->y, 2 ) ) / pow( sig_h * 0.01, 2 ) ) );
+		double x = it->x / it->z;
+		double y = it->y / it->z;
+		if(y > 0) // Above ground?
+		{
+			temp.at<double>(0, 0) = x;
+			temp.at<double>(0, 1) = y;
+			normPoints.push_back(temp);
+		}
 	}
-	pos = max_element ( val.begin(), val.end() );
 
-	return *pos;
+	if(normPoints.rows < 10)
+		return false;
+	
+	temp.release();
+	temp = Mat::zeros(2, 1, CV_64FC1); // 2 x 1
+	temp.at<double>(0, 0) = cos(pitch);
+	temp.at<double>(0, 1) = sin(-pitch);
+
+	// Compute 'height' of all points
+	points = normPoints * temp; // N x 1
+
+	double bestSum = 0;
+	uint32_t bestIdx = 0;
+
+	uint32_t N = (uint32_t)points.rows;
+	for(uint32_t i = 0; i < N; i++)
+	{
+		double sum = 0;
+		for(uint32_t j = 0; j < N; j++)
+		{
+			double dist = points.at<double>(j) - points.at<double>(i);
+			if (dist > 0)
+				sum += exp(-dist * dist * wP);
+			else
+				sum += exp(-dist * dist * wM);
+		}
+
+		if(sum > bestSum)
+		{
+			bestSum = sum;
+			bestIdx = i;
+		}
+	}
+
+	estH = points.at<double>(bestIdx, 0);
+	return true;
 }

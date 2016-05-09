@@ -29,7 +29,9 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	hconcat(R, t, Rt);
 	pM = K * Rt;
 
-	//Tr = Mat::eye(4, 4, CV_64FC1);
+	Tr = Mat::eye(4, 4, CV_64FC1);
+
+	rho = 1.0;
 }
 
 Odometry::~Odometry()
@@ -134,7 +136,7 @@ void Odometry::triangulate(const vector<Point2d> &xp,
 						   const vector<Point2d> &x,
 						   vector<Point3d> &X)
 {
-	Mat triangPt(4, x.size(), CV_64FC1);
+	Mat triangPt(4, (uint32_t)x.size(), CV_64FC1);
 
 	// Triangulate points to 4D
 	triangulatePoints(pM, cM, xp, x, triangPt);
@@ -241,14 +243,16 @@ void Odometry::computeProjection()
 
 void Odometry::correctScale(vector<Point3d> &points)
 {
+	double pitch = param.odParam.pitch;
 	double trueHeight = param.odParam.cameraHeight;
 
 	// Compute estimated height
-	double estHeight = gaussKernel(trueHeight, points);
+	double estHeight;
 
 	// Compute the scaling factor
-	double rho = trueHeight / estHeight;
+	if(gaussKernel(pitch, points, estHeight))
+		rho = trueHeight / estHeight;
 
-	fprintf(stdout, "estHeight:%4.2f\n", estHeight);
-	//t = t * rho;
+	cout << rho << endl;
+	t = t * rho;
 }
