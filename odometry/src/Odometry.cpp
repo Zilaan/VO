@@ -3,6 +3,7 @@
 #include "Odometry.h"
 #include "Matcher.h"
 #include "Scale.h"
+#include <math.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
@@ -19,17 +20,6 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	K.at<double>(0, 2) = param.odParam.cu;
 	K.at<double>(1, 1) = param.odParam.f;
 	K.at<double>(1, 2) = param.odParam.cv;
-
-	// Set the initial value of R, t and projection matrix
-	Mat Rt;
-	R = Mat::eye(3, 3, CV_64FC1);
-	t = Mat::zeros(3, 1, CV_64FC1);
-	RFinal = R.clone();
-	tFinal = t.clone();
-	hconcat(R, t, Rt);
-	pM = K * Rt;
-
-	Tr = Mat::eye(4, 4, CV_64FC1);
 
 	rho = 1.0;
 }
@@ -61,26 +51,17 @@ bool Odometry::process(const Mat &image)
 		// Compute R and t
 		fivePoint(f1Keypoints, f2Keypoints, matches12);
 
-		// Update projection matrix i.e. cM
-		computeProjection();
-
 		// Compute 3D points
 		triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
 
 		// Compute scale
-		correctScale(worldPoints);
+		//correctScale(worldPoints);
 
-		pM.release();
-		pM = cM.clone();
+		vector<double> tr_delta = transformationVec(R, t);
 
-		tFinal = tFinal + RFinal * t;
-		RFinal = R * RFinal;
-
-		//fprintf(stdout, "X:%4.2f, Y:%4.2f, Z:%4.2f\n", tFinal.at<double>(0, 0), tFinal.at<double>(0, 1), tFinal.at<double>(0, 2));
+		Tr_delta = transformationMat(tr_delta);
 
 		swapAll();
-
-
 	}
 	frameNr++;
 	return true;
@@ -138,6 +119,13 @@ void Odometry::triangulate(const vector<Point2d> &xp,
 {
 	Mat triangPt(4, (uint32_t)x.size(), CV_64FC1);
 
+	Mat pM = Mat::zeros(3, 4, CV_64FC1);
+	Mat cM = Mat::zeros(3, 4, CV_64FC1);
+	K.copyTo(pM(Range(0, 3), Range(0, 3)));
+	R.copyTo(cM(Range(0, 3), Range(0, 3)));
+	t.copyTo(cM.col(3));
+	cM = K * cM;
+
 	// Triangulate points to 4D
 	triangulatePoints(pM, cM, xp, x, triangPt);
 
@@ -183,10 +171,6 @@ void Odometry::pnp(const vector<Point3d> &X,
 
 	Rodrigues(rvec, R); // Convert rotation vector to matrix
 	t = tvec;
-
-	// Update projection matrix
-	pM.release();
-	pM = cM.clone();
 }
 
 void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
@@ -221,24 +205,64 @@ void Odometry::fromHomogeneous(const Mat &Pt4f, vector<Point3d> &Pt3f)
 	}
 }
 
-void Odometry::computeTransformation()
+vector<double> Odometry::transformationVec(const Mat &RMat, const Mat &tvec)
 {
-	for(int r = 0; r < cM.rows; r++)
-	{
-		for(int c = 0; c < cM.cols; c++)
-		{
-			Tr.at<double>(r, c) = cM.at<double>(r, c);
-		}
-	}
+	double ry = asin( RMat.at<double>(0, 2));
+	double rx = asin(-RMat.at<double>(1, 2)) / cos(ry);
+	double rz = asin(-RMat.at<double>(0, 1)) / cos(ry);
+
+	vector<double> tr_delta;
+	tr_delta.resize(6);
+	tr_delta[0] = rx;
+	tr_delta[1] = ry;
+	tr_delta[2] = rz;
+	tr_delta[3] = tvec.at<double>(0);
+	tr_delta[4] = tvec.at<double>(1);
+	tr_delta[5] = tvec.at<double>(2);
+	return tr_delta;
+}
+
+Mat Odometry::transformationMat(const vector<double> &tr)
+{
+	// extract parameters
+	double rx = tr[0];
+	double ry = tr[1];
+	double rz = tr[2];
+	double tx = tr[3];
+	double ty = tr[4];
+	double tz = tr[5];
+
+	// precompute sine/cosine
+	double sx = sin(rx);
+	double cx = cos(rx);
+	double sy = sin(ry);
+	double cy = cos(ry);
+	double sz = sin(rz);
+	double cz = cos(rz);
+
+	// compute transformation
+	Mat Tr = Mat::zeros(4, 4, CV_64FC1);
+	Tr.at<double>(0, 0) = +cy * cz;
+	Tr.at<double>(0, 1) = -cy * sz;
+	Tr.at<double>(0, 2) = +sy;
+	Tr.at<double>(0, 3) = tx;
+	Tr.at<double>(1, 0) = +sx * sy * cz + cx * sz;
+	Tr.at<double>(1, 1) = -sx * sy * sz + cx * cz;
+	Tr.at<double>(1, 2) = -sx * cy;
+	Tr.at<double>(1, 3) = ty;
+	Tr.at<double>(2, 0) = -cx * sy * cz + sx * sz;
+	Tr.at<double>(2, 1) = +cx * sy * sz + sx * cz;
+	Tr.at<double>(2, 2) = +cx * cy;
+	Tr.at<double>(2, 3) = tz;
+	Tr.at<double>(3, 0) = 0;
+	Tr.at<double>(3, 1) = 0;
+	Tr.at<double>(3, 2) = 0;
+	Tr.at<double>(3, 3) = 1;
+	return Tr;
 }
 
 void Odometry::computeProjection()
 {
-	Mat Rt;
-
-	// Compute the current projection matrix
-	hconcat(R, t, Rt);
-	cM = K * Rt;
 }
 
 void Odometry::correctScale(vector<Point3d> &points)
@@ -253,6 +277,6 @@ void Odometry::correctScale(vector<Point3d> &points)
 	if(gaussKernel(pitch, points, estHeight))
 		rho = trueHeight / estHeight;
 
-	cout << rho << endl;
+	cout << "Scale: " << rho << endl;
 	t = t * rho;
 }

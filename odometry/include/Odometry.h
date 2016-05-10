@@ -64,7 +64,7 @@ public:
 
 	cv::Mat getMotion()
 	{
-		return tFinal;
+		return Tr_delta;
 	}
 
 private:
@@ -95,7 +95,9 @@ private:
 
 	void fromHomogeneous(const cv::Mat &Pt4f, std::vector<cv::Point3d> &Pt3f);
 
-	void computeTransformation();
+	std::vector<double> transformationVec(const cv::Mat &RMat, const cv::Mat &tvec);
+
+	cv::Mat transformationMat(const std::vector<double> &tr);
 
 	void computeProjection();
 
@@ -109,13 +111,9 @@ private:
 
 	cv::Mat K;  // Intrisic parameters for camera
 	cv::Mat E;  // Essential matrix
-	cv::Mat RFinal;  // Rotation matrix
-	cv::Mat tFinal;  // Translation vector
 	cv::Mat R;  // Rotation matrix
 	cv::Mat t;  // Translation vector
-	cv::Mat pM; // Previous projection matrix
-	cv::Mat cM; // Current projection matrix
-	cv::Mat Tr; // Previous and current trans matrix
+	cv::Mat Tr_delta; // Previous and current trans matrix
 	double rho; // Scale factor
 
 	// Keypoints filtered with shared matches
