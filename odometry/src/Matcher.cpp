@@ -7,14 +7,38 @@ using namespace cv;
 
 Matcher::Matcher(parameters param) : _ratio(0.8f)
 {
+	Ptr<FeatureDetector> orb = ORB::create();
+//	Ptr<FeatureDetector> orb = ORB::create(
+//			 40,				// nFeatures
+//			 1.7f,				// scaleFactor
+//			 8,					// nlevels
+//			 7,						// edgeThreshold
+//			 0,					// firstLevel
+//			 2,					// WTA_K
+//			 ORB::HARRIS_SCORE, // scoreType
+//			 7,						// patchSize
+//			 20					// fastThreshold
+//);
 	// Use ORB as default detector
-	_detector = ORB::create();
-
+	_detector = orb;
 	// Use ORB as default descriptor
-	_descriptor = ORB::create();
+	_descriptor = orb;
 
-	// Use Brute Force with Norm Hamming as default
-	_matcher = makePtr<BFMatcher>((int) NORM_HAMMING, false);
+	Ptr<flann::IndexParams> indexParams = makePtr<flann::LshIndexParams>(6, 12, 1);
+	Ptr<flann::SearchParams> searchParams = makePtr<flann::SearchParams>(50);
+
+	// instantiate FlannBased matcher
+	Ptr<DescriptorMatcher> matcher = makePtr<FlannBasedMatcher>(indexParams, searchParams);
+	_matcher = matcher;
+
+	//// Use ORB as default detector
+	//_detector = ORB::create();
+
+	//// Use ORB as default descriptor
+	//_descriptor = ORB::create();
+
+	//// Use Brute Force with Norm Hamming as default
+	//_matcher = makePtr<BFMatcher>((int) NORM_HAMMING, false);
 }
 
 Matcher::~Matcher()
