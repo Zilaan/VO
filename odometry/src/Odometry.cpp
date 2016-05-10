@@ -71,7 +71,8 @@ void Odometry::fivePoint(const vector<KeyPoint> &xp,
 						 const vector<KeyPoint> &x,
 						 vector<DMatch> &matches)
 {
-	Mat inliers;
+	inliers.release();
+	vector<Point2d> pMTemp, cMTemp;
 
 	pMatchedPoints.clear();
 	cMatchedPoints.clear();
@@ -80,16 +81,30 @@ void Odometry::fivePoint(const vector<KeyPoint> &xp,
 	vector<DMatch>::iterator it;
 	for(it = matches.begin(); it != matches.end(); ++it)
 	{
-		pMatchedPoints.push_back(xp[it->queryIdx].pt);
-		cMatchedPoints.push_back(x[it->trainIdx].pt);
+		pMTemp.push_back(xp[it->queryIdx].pt);
+		cMTemp.push_back(x[it->trainIdx].pt);
 	}
 
-	E = findEssentialMat(pMatchedPoints, cMatchedPoints,
+	E = findEssentialMat(pMTemp, cMTemp,
 						 K, RANSAC, param.odParam.ransacProb,
 						 param.odParam.ransacError, inliers);
 
 	// Recover R and t from E
-	recoverPose(E, pMatchedPoints, cMatchedPoints, K, R, t, inliers);
+	recoverPose(E, pMTemp, cMTemp, K, R, t, inliers);
+
+	int32_t N = sum(inliers)[0];
+	int32_t j = 0;
+	pMatchedPoints.resize(N);
+	cMatchedPoints.resize(N);
+	for(int i = 0; i < (int) inliers.rows; i++)
+	{
+		if(inliers.at<uint8_t>(i) == 1)
+		{
+			pMatchedPoints[j] = pMTemp[i];
+			cMatchedPoints[j] = cMTemp[i];
+			j++;
+		}
+	}
 }
 
 void Odometry::swapAll()
@@ -105,7 +120,7 @@ void Odometry::swapAll()
 	//f2Keypoints = f3Keypoints;
 
 	// Swap matches
-	matches12.clear();
+	//matches12.clear();
 	//matches12 = matches23;
 
 	//sharedMatches12.clear();
