@@ -2,6 +2,7 @@
 #define ODOMETRY_H
 
 #include "Matcher.h"
+#include <stdint.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
@@ -67,6 +68,29 @@ public:
 		return Tr_delta;
 	}
 
+	std::vector<cv::Point2d> getKeypoints(int a)
+	{
+		if(a == 0)
+			return pMatchedPoints;
+		else
+			return cMatchedPoints;
+	}
+
+	int32_t getNumKeypoints()
+	{
+		return f1Keypoints.size();
+	}
+
+	int32_t getNumInliers()
+	{
+		return (int32_t) sum(inliers)[0];
+	}
+
+	int32_t getNumMatches()
+	{
+		return matches12.size();
+	}
+
 private:
 	// Estimate motion
 	void fivePoint(const std::vector<cv::KeyPoint> &x,
@@ -126,6 +150,7 @@ private:
 	cv::Mat f1Descriptors;
 	cv::Mat f2Descriptors;
 	cv::Mat f3Descriptors;
+	cv::Mat inliers;
 
 	// Matches from three frames
 	std::vector<cv::DMatch> matches12;
