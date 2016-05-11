@@ -6,6 +6,6 @@
 
 bool sigma(const cv::Mat &points, double &sig_h);
 
-bool gaussKernel(double &pitch, std::vector<cv::Point3d> &xyz, double &estH);
+bool gaussKernel(double &pitch, std::vector<cv::Point3d> &xyz, double &estH, double &motionTh);
 
 #endif // SCALE_H
