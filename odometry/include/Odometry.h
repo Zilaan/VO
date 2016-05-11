@@ -29,6 +29,8 @@ public:
 		int ransacIterations;
 		double ransacError;
 		double ransacProb;
+		int scaling;
+		double motionThreshold;
 		odometryParameters()
 		{
 			/*
@@ -46,6 +48,8 @@ public:
 			ransacIterations = 2000;
 			ransacError      = 2;
 			ransacProb       = 0.99;
+			scaling          = 1;
+			motionThreshold  = 100;
 		}
 	};
 
@@ -74,6 +78,11 @@ public:
 			return pMatchedPoints;
 		else
 			return cMatchedPoints;
+	}
+
+	double getHeight()
+	{
+		return estHeight;
 	}
 
 	int32_t getNumKeypoints()
@@ -139,6 +148,7 @@ private:
 	cv::Mat t;  // Translation vector
 	cv::Mat Tr_delta; // Previous and current trans matrix
 	double rho; // Scale factor
+	double estHeight; // Estimated height by kernel
 
 	// Keypoints filtered with shared matches
 	std::vector<cv::Point2d> goodF1Key, goodF2Key, goodF3Key;
