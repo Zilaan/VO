@@ -55,7 +55,7 @@ bool Odometry::process(const Mat &image)
 		triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
 
 		// Compute scale
-		//correctScale(worldPoints);
+		correctScale(worldPoints);
 
 		vector<double> tr_delta = transformationVec(R, t);
 
@@ -285,13 +285,21 @@ void Odometry::correctScale(vector<Point3d> &points)
 	double pitch = param.odParam.pitch;
 	double trueHeight = param.odParam.cameraHeight;
 
-	// Compute estimated height
-	double estHeight;
+	if(param.odParam.scaling == 0) // No scaling
+	{
+		return;
+	}
+	else if(param.odParam.scaling == 1) // Scaling
+	{
+		// Compute the scaling factor
+		if(gaussKernel(pitch, points, estHeight, param.odParam.motionThreshold))
+			rho = trueHeight / estHeight;
 
-	// Compute the scaling factor
-	if(gaussKernel(pitch, points, estHeight))
-		rho = trueHeight / estHeight;
-
-	cout << "Scale: " << rho << endl;
-	t = t * rho;
+		t = t * rho;
+	}
+	else // Height estimation but no scaling
+	{
+		// Compute the scaling factor
+		gaussKernel(pitch, points, estHeight, param.odParam.motionThreshold);
+	}
 }
