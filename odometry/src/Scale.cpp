@@ -32,7 +32,7 @@ bool sigma(const Mat &points, double &sig_h)
 	//Point3d *p = &points[0];
 	for(uint32_t n = 0; n < N; n++)
 	{
-		*(d++) = fabs(points.at<double>(n, 0)) + fabs(points.at<double>(n, 1)) + 1;
+		*(d++) = fabs(points.at<double>(n, 0)) + fabs(points.at<double>(n, 1)) + fabs(points.at<double>(n, 2));
 		*(i++) = n;
 		//p++;
 	}
@@ -45,22 +45,24 @@ bool sigma(const Mat &points, double &sig_h)
 	return true;
 }
 
-bool gaussKernel(double &pitch, vector<Point3d> &xyz, double &estH)//function to estimate the height of the camera
+bool gaussKernel(double &pitch, vector<Point3d> &xyz, double &estH, double &motionTh)//function to estimate the height of the camera
 {
 	double sig_h;
 
 	Mat normPoints, points; // N x 2
-	Mat temp = Mat::zeros(1, 2, CV_64FC1); // 1 x 2
+	Mat temp = Mat::zeros(1, 3, CV_64FC1); // 1 x 2
 
 	// Normlize and keep points above 'ground'
 	for(vector<Point3d>::iterator it = xyz.begin(); it != xyz.end(); ++it)
 	{
-		double x = it->x / it->z;
-		double y = it->y / it->z;
-		if(y > 0) // Above ground?
+		double x = it->x;
+		double y = it->y;
+		double z = it->z;
+		if(z > 0) // Above ground?
 		{
 			temp.at<double>(0, 0) = x;
 			temp.at<double>(0, 1) = y;
+			temp.at<double>(0, 2) = z;
 			normPoints.push_back(temp);
 		}
 	}
@@ -69,14 +71,19 @@ bool gaussKernel(double &pitch, vector<Point3d> &xyz, double &estH)//function to
 		return false;
 
 	sigma(normPoints, sig_h);
+	double median = 50 * sig_h;
+	if(median > motionTh)
+		return false;
+
 	double wP = 1.0 / (2.0 * sig_h * sig_h);
 	sig_h = 0.01 * sig_h;
 	double wM = 1.0 / (2.0 * sig_h * sig_h);
 	
 	temp.release();
-	temp = Mat::zeros(2, 1, CV_64FC1); // 2 x 1
-	temp.at<double>(0, 0) = cos(-pitch);
-	temp.at<double>(0, 1) = sin(-pitch);
+	temp = Mat::zeros(3, 1, CV_64FC1); // 2 x 1
+	temp.at<double>(0, 0) = 0;
+	temp.at<double>(0, 1) = cos(-pitch);
+	temp.at<double>(0, 2) = sin(-pitch);
 
 	// Compute 'height' of all points
 	points = normPoints * temp; // N x 1
@@ -87,20 +94,23 @@ bool gaussKernel(double &pitch, vector<Point3d> &xyz, double &estH)//function to
 	uint32_t N = (uint32_t)points.rows;
 	for(uint32_t i = 0; i < N; i++)
 	{
-		double sum = 0;
-		for(uint32_t j = 0; j < N; j++)
+		if(points.at<double>(i) > median / motionTh)
 		{
-			double dist = points.at<double>(j) - points.at<double>(i);
-			if (dist > 0)
-				sum += exp(-dist * dist * wP);
-			else
-				sum += exp(-dist * dist * wM);
-		}
+			double sum = 0;
+			for(uint32_t j = 0; j < N; j++)
+			{
+				double dist = points.at<double>(j) - points.at<double>(i);
+				if (dist > 0)
+					sum += exp(-dist * dist * wP);
+				else
+					sum += exp(-dist * dist * wM);
+			}
 
-		if(sum > bestSum)
-		{
-			bestSum = sum;
-			bestIdx = i;
+			if(sum > bestSum)
+			{
+				bestSum = sum;
+				bestIdx = i;
+			}
 		}
 	}
 
