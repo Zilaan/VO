@@ -1,15 +1,22 @@
 #include "Matcher.h"
 #include <time.h>
 #include <opencv2/features2d/features2d.hpp>
+#include "opencv2/xfeatures2d.hpp"
 
 using namespace std;
 using namespace cv;
+using namespace cv::xfeatures2d;
 
 Matcher::Matcher(parameters param) : _ratio(0.8f)
 {
-	Ptr<FeatureDetector> orb = ORB::create();
+// Extractors Descriptors Matcher
+// 0: Fast    0: BRIEF    0: BF
+// 1: ORB     1: ORB      1: FLANN: KDTree
+// 2: SURF    2: SURF     2: FLANN: LSH
+// 3: SIFT    3: SIFT
+
 //	Ptr<FeatureDetector> orb = ORB::create(
-//			 40,				// nFeatures
+//			 75,				// nFeatures
 //			 1.7f,				// scaleFactor
 //			 8,					// nlevels
 //			 7,						// edgeThreshold
@@ -19,26 +26,73 @@ Matcher::Matcher(parameters param) : _ratio(0.8f)
 //			 7,						// patchSize
 //			 20					// fastThreshold
 //);
-	// Use ORB as default detector
-	_detector = orb;
-	// Use ORB as default descriptor
-	_descriptor = orb;
+	Ptr<FeatureDetector> ext;
+	switch (param.extractor)
+	{
+		case 0:
+			ext =  FastFeatureDetector::create();
+			break;
 
-	Ptr<flann::IndexParams> indexParams = makePtr<flann::LshIndexParams>(6, 12, 1);
-	Ptr<flann::SearchParams> searchParams = makePtr<flann::SearchParams>(50);
+		case 1:
+			ext = ORB::create();
+			break;
 
-	// instantiate FlannBased matcher
-	Ptr<DescriptorMatcher> matcher = makePtr<FlannBasedMatcher>(indexParams, searchParams);
-	_matcher = matcher;
+		case 2:
+			ext = SURF::create();
+			break;
 
-	//// Use ORB as default detector
-	//_detector = ORB::create();
+		case 3:
+			ext = SIFT::create();
+			break;
+	}
 
-	//// Use ORB as default descriptor
-	//_descriptor = ORB::create();
+	Ptr<FeatureDetector> des;
+	switch (param.descriptor)
+	{
+		case 0:
+			des = ORB::create();
+			break;
 
-	//// Use Brute Force with Norm Hamming as default
-	//_matcher = makePtr<BFMatcher>((int) NORM_HAMMING, false);
+		case 1:
+			des = ORB::create();
+			break;
+
+		case 2:
+			des = SURF::create();
+			break;
+
+		case 3:
+			des = SIFT::create();
+			break;
+	}
+
+	Ptr<flann::IndexParams> indexParams;
+	Ptr<flann::SearchParams> searchParams;
+	Ptr<DescriptorMatcher> match;
+	switch (param.matcher)
+	{
+		case 0:
+			match = makePtr<BFMatcher>((int) NORM_HAMMING, false);
+			break;
+
+		case 1:
+			indexParams  = makePtr<flann::KDTreeIndexParams>();
+			searchParams = makePtr<flann::SearchParams>(50);
+			match        = makePtr<FlannBasedMatcher>(indexParams, searchParams);
+			break;
+
+		case 2:
+			indexParams  = makePtr<flann::LshIndexParams>(6, 12, 1);
+			searchParams = makePtr<flann::SearchParams>(50);
+			match        = makePtr<FlannBasedMatcher>(indexParams, searchParams);
+			break;
+	}
+
+	_detector   = ext;     // Set the extractor
+	_descriptor = des;     // Set the descriptor
+	_matcher    = match;   // Set the matcher
+
+	bucketing = param.bucketing;
 }
 
 Matcher::~Matcher()
@@ -48,7 +102,41 @@ Matcher::~Matcher()
 void Matcher::computeDescriptors(const Mat &image, Mat &descriptors,
 								 vector<KeyPoint> &keypoints)
 {
-	_detector->detect(image, keypoints);
+	int y[] = {0, 188};
+	int yd = 188;
+	int x[] = {0, 310, 620, 930};
+	int xd = 310;
+	vector<KeyPoint> tempKey;
+
+	if(bucketing == 1)
+	{
+		for(int i = 0; i < 2; i++)
+		{
+			for(int j = 0; j < 4; j++)
+			{
+				tempKey.clear();
+				Mat mask = Mat::zeros(image.size(), CV_8UC1);
+				Mat roi(mask, Rect(x[j], y[i], xd, yd));
+				roi = Scalar(255);
+				_detector->detect(image, tempKey, mask);
+				//_detector->detect(image, keypoints);
+				//cout << endl << "tempKey" << endl;;
+				//for(vector<KeyPoint>::iterator it = tempKey.begin(); it != tempKey.end(); ++it)
+				//{
+				//	//it->pt.x = it->pt.x + x[j];
+				//	//it->pt.y = it->pt.y + y[i];
+				//	//it->pt.x = it->pt.x + 10;
+				//	//it->pt.y = it->pt.y + 10;
+				//	cout << it->pt << endl;
+				//}
+				keypoints.insert(keypoints.end(), tempKey.begin(), tempKey.end());
+			}
+		}
+	}
+	else
+	{
+		_detector->detect(image, keypoints);
+	}
 	_descriptor->compute(image, keypoints, descriptors);
 }
 
