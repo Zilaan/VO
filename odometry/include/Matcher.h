@@ -10,11 +10,21 @@ class Matcher
 public:
 	struct parameters
 	{
-		//
-		int test;
+		// Extractors Descriptors Matcher
+		// 0: Fast    0: BRIEF    0: BF
+		// 1: ORB     1: ORB      1: FLANN: KDTree
+		// 2: SURF    2: SURF     2: FLANN: LSH
+		// 3: SIFT    3: SIFT
+		int extractor;
+		int descriptor;
+		int matcher;
+		int bucketing;
 		parameters()
 		{
-			test = 0;
+			extractor  = 1;
+			descriptor = 0;
+			matcher    = 2;
+			bucketing  = 0;
 		}
 	};
 
@@ -69,6 +79,8 @@ private:
 
 	// Max ratio between 1st and 2nd NN
 	float _ratio;
+
+	int bucketing;
 };
 
 #endif
