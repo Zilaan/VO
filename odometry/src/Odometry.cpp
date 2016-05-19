@@ -30,23 +30,22 @@ Odometry::~Odometry()
 	delete mainMatcher;
 }
 
-/* Assuming that the Matcher is setup,
- * it should be implemented in the
- * constructor
- */
 bool Odometry::process(const Mat &image)
 {
 	if(frameNr == 1)
 	{
 		// Frist frame, compute only keypoints and descriptors
-		mainMatcher->computeDescriptors(image, f1Descriptors, f1Keypoints);
+		if(!mainMatcher->computeDescriptors(image, f1Descriptors, f1Keypoints))
+			return false;
 	}
 	else
 	{
 		// Second frame available, match features with previous frame
 		// and compute pose using Nister's five point
-		mainMatcher->computeDescriptors(image, f2Descriptors, f2Keypoints);
-		mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12);
+		if(!mainMatcher->computeDescriptors(image, f2Descriptors, f2Keypoints))
+			return false;
+		if(!mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12))
+			return false;
 
 		// Compute R and t
 		fivePoint(f1Keypoints, f2Keypoints, matches12);
@@ -128,7 +127,7 @@ void Odometry::swapAll()
 
 }
 
-void Odometry::triangulate(const vector<Point2d> &xp,
+bool Odometry::triangulate(const vector<Point2d> &xp,
 						   const vector<Point2d> &x,
 						   vector<Point3d> &X)
 {
@@ -142,9 +141,13 @@ void Odometry::triangulate(const vector<Point2d> &xp,
 	cM = K * cM;
 
 	// Triangulate points to 4D
+	if(xp.size() < 10)
+		return false;
 	triangulatePoints(pM, cM, xp, x, triangPt);
 
 	fromHomogeneous(triangPt, X);
+
+	return true;
 }
 
 void Odometry::sharedMatches(const vector<DMatch> &m1,

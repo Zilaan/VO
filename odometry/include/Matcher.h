@@ -54,10 +54,10 @@ public:
 		_matcher = match;
 	}
 
-	void computeFeatures(cv::Mat &image, std::vector<cv::Point2f>& points);
+	bool computeFeatures(cv::Mat &image, std::vector<cv::Point2f>& points);
 
 	// Compute the feature descriptors
-	void computeDescriptors(const cv::Mat &image, cv::Mat &descriptors,
+	bool computeDescriptors(const cv::Mat &image, cv::Mat &descriptors,
 							std::vector<cv::KeyPoint> &keypoints);
 
 	// Set ratio threshold
@@ -70,10 +70,10 @@ public:
 	int ratioTest(std::vector< std::vector<cv::DMatch> > &matches);
 
 	// Use a fast feature matcher
-	void fastMatcher(cv::Mat &prev_descriptors, cv::Mat &curr_descriptors,
+	bool fastMatcher(cv::Mat &prev_descriptors, cv::Mat &curr_descriptors,
 					 std::vector<cv::DMatch> &good_matches);
 
-	void featureTracking(const cv::Mat &image1, const cv::Mat &image2, std::vector<cv::Point2f> &points1, std::vector<cv::Point2f> &points2, std::vector<uchar> &status);
+	bool featureTracking(const cv::Mat &image1, const cv::Mat &image2, std::vector<cv::Point2f> &points1, std::vector<cv::Point2f> &points2, std::vector<uchar> &status);
 
 private:
 	// Pointer to feature detector object

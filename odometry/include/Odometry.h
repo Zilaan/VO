@@ -108,7 +108,7 @@ private:
 
 	void swapAll();
 
-	void triangulate(const std::vector<cv::Point2d> &xp,
+	bool triangulate(const std::vector<cv::Point2d> &xp,
 					 const std::vector<cv::Point2d> &x,
 					 std::vector<cv::Point3d> &X);
 

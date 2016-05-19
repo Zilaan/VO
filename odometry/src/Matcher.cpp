@@ -97,15 +97,19 @@ Matcher::~Matcher()
 {
 }
 
-void Matcher::computeFeatures(Mat &image, vector<Point2f>& points)
+bool Matcher::computeFeatures(Mat &image, vector<Point2f>& points)
 {
 	points.clear();
 	vector<KeyPoint> keypoints;
 	_detector->detect(image, keypoints);
+	if(keypoints.size() < 10)
+		return false;
 	KeyPoint::convert(keypoints, points, vector<int>());
+
+	return true;
 }
 
-void Matcher::computeDescriptors(const Mat &image, Mat &descriptors,
+bool Matcher::computeDescriptors(const Mat &image, Mat &descriptors,
 								 vector<KeyPoint> &keypoints)
 {
 	int y[] = {0, 188};
@@ -136,14 +140,20 @@ void Matcher::computeDescriptors(const Mat &image, Mat &descriptors,
 				//	cout << it->pt << endl;
 				//}
 				keypoints.insert(keypoints.end(), tempKey.begin(), tempKey.end());
+				if(keypoints.size() < 10)
+					return false;
 			}
 		}
 	}
 	else
 	{
 		_detector->detect(image, keypoints);
+		if(keypoints.size() < 10)
+			return false;
 	}
 	_descriptor->compute(image, keypoints, descriptors);
+
+	return true;
 }
 
 int Matcher::ratioTest(vector< vector<DMatch> > &matches)
@@ -174,7 +184,7 @@ int Matcher::ratioTest(vector< vector<DMatch> > &matches)
 	return removed;
 }
 
-void Matcher::fastMatcher(Mat &prev_descriptors, Mat &curr_descriptors,
+bool Matcher::fastMatcher(Mat &prev_descriptors, Mat &curr_descriptors,
 						  vector<DMatch> &good_matches)
 {
 	// Clear matches from previous frame
@@ -182,6 +192,8 @@ void Matcher::fastMatcher(Mat &prev_descriptors, Mat &curr_descriptors,
 
 	vector< vector<DMatch> > matches;
 	_matcher->knnMatch(prev_descriptors, curr_descriptors, matches, 2);
+	if(matches.size() < 10)
+		return false;
 
 	// Performe ratio test on the matches
 	ratioTest(matches);
@@ -193,9 +205,14 @@ void Matcher::fastMatcher(Mat &prev_descriptors, Mat &curr_descriptors,
 		if (!it->empty())
 			good_matches.push_back((*it)[0]);
 	}
+
+	if(good_matches.size() < 10)
+		return false;
+
+	return true;
 }
 
-void Matcher::featureTracking(const Mat &image1, const Mat &image2, vector<Point2f> &points1, vector<Point2f> &points2, vector<uchar> &status)
+bool Matcher::featureTracking(const Mat &image1, const Mat &image2, vector<Point2f> &points1, vector<Point2f> &points2, vector<uchar> &status)
 {
 	vector<float> err;
 	Size winSize = Size(21, 21);
@@ -219,4 +236,9 @@ void Matcher::featureTracking(const Mat &image1, const Mat &image2, vector<Point
 			indexCorrection++;
 		}
 	}
+
+	if(points1.size() < 10)
+		return false;
+
+	return true;
 }
