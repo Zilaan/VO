@@ -1,7 +1,5 @@
 #include "Matcher.h"
 #include <time.h>
-#include <opencv2/features2d/features2d.hpp>
-#include "opencv2/xfeatures2d.hpp"
 
 using namespace std;
 using namespace cv;
@@ -99,6 +97,14 @@ Matcher::~Matcher()
 {
 }
 
+void Matcher::computeFeatures(Mat &image, vector<Point2f>& points)
+{
+	points.clear();
+	vector<KeyPoint> keypoints;
+	_detector->detect(image, keypoints);
+	KeyPoint::convert(keypoints, points, vector<int>());
+}
+
 void Matcher::computeDescriptors(const Mat &image, Mat &descriptors,
 								 vector<KeyPoint> &keypoints)
 {
@@ -186,5 +192,31 @@ void Matcher::fastMatcher(Mat &prev_descriptors, Mat &curr_descriptors,
 	{
 		if (!it->empty())
 			good_matches.push_back((*it)[0]);
+	}
+}
+
+void Matcher::featureTracking(const Mat &image1, const Mat &image2, vector<Point2f> &points1, vector<Point2f> &points2, vector<uchar> &status)
+{
+	vector<float> err;
+	Size winSize = Size(21, 21);
+	TermCriteria termcrit = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, 0.01);
+
+	calcOpticalFlowPyrLK(image1, image2, points1, points2, status, err, winSize, 3, termcrit, 0, 0.001);
+
+	//getting rid of points for which the KLT tracking failed or those who have gone outside the frame
+	int indexCorrection = 0;
+	for( int i = 0; i < status.size(); i++)
+	{
+		Point2f pt = points2.at(i - indexCorrection);
+		if ((status.at(i) == 0) || (pt.x < 0) || (pt.y < 0))
+		{
+			if((pt.x < 0) || (pt.y < 0))
+			{
+				status.at(i) = 0;
+			}
+			points1.erase (points1.begin() + (i - indexCorrection));
+			points2.erase (points2.begin() + (i - indexCorrection));
+			indexCorrection++;
+		}
 	}
 }
