@@ -30,7 +30,7 @@ Matcher::Matcher(parameters param) : _ratio(0.8f)
 	switch (param.extractor)
 	{
 		case 0:
-			ext =  FastFeatureDetector::create();
+			ext =  FastFeatureDetector::create(20, true, FastFeatureDetector::TYPE_9_16);
 			break;
 
 		case 1:
@@ -50,7 +50,7 @@ Matcher::Matcher(parameters param) : _ratio(0.8f)
 	switch (param.descriptor)
 	{
 		case 0:
-			des = ORB::create();
+			des = BriefDescriptorExtractor::create();
 			break;
 
 		case 1:
