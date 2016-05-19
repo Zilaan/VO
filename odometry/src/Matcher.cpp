@@ -97,7 +97,7 @@ Matcher::~Matcher()
 {
 }
 
-bool Matcher::computeFeatures(Mat &image, vector<Point2f>& points)
+bool Matcher::computeFeatures(const Mat &image, vector<Point2f>& points)
 {
 	points.clear();
 	vector<KeyPoint> keypoints;

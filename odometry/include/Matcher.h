@@ -54,7 +54,7 @@ public:
 		_matcher = match;
 	}
 
-	bool computeFeatures(cv::Mat &image, std::vector<cv::Point2f>& points);
+	bool computeFeatures(const cv::Mat &image, std::vector<cv::Point2f>& points);
 
 	// Compute the feature descriptors
 	bool computeDescriptors(const cv::Mat &image, cv::Mat &descriptors,
