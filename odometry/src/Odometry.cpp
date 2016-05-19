@@ -32,35 +32,79 @@ Odometry::~Odometry()
 
 bool Odometry::process(const Mat &image)
 {
-	if(frameNr == 1)
+	if(param.odParam.method == 0) // Use matcher
 	{
-		// Frist frame, compute only keypoints and descriptors
-		if(!mainMatcher->computeDescriptors(image, f1Descriptors, f1Keypoints))
-			return false;
+		if(frameNr == 1)
+		{
+			// Frist frame, compute only keypoints and descriptors
+			if(!mainMatcher->computeDescriptors(image, f1Descriptors, f1Keypoints))
+				return false;
+		}
+		else
+		{
+			// Second frame available, match features with previous frame
+			// and compute pose using Nister's five point
+			if(!mainMatcher->computeDescriptors(image, f2Descriptors, f2Keypoints))
+				return false;
+			if(!mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12))
+				return false;
+
+			// Compute R and t
+			fivePoint(f1Keypoints, f2Keypoints, matches12);
+
+			// Compute 3D points
+			triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
+
+			// Compute scale
+			correctScale(worldPoints);
+
+			vector<double> tr_delta = transformationVec(R, t);
+
+			Tr_delta = transformationMat(tr_delta);
+
+			swapAll();
+		}
 	}
-	else
+	else // Use tracker
 	{
-		// Second frame available, match features with previous frame
-		// and compute pose using Nister's five point
-		if(!mainMatcher->computeDescriptors(image, f2Descriptors, f2Keypoints))
-			return false;
-		if(!mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12))
-			return false;
+		if(frameNr == 1)
+		{
+			// Frist frame, compute only keypoints and descriptors
+			if(!mainMatcher->computeFeatures(image, f1Points))
+				return false;
+			prevImage = image.clone();
+		}
+		else
+		{
+			// Second frame available, match features with previous frame
+			// and compute pose using Nister's five point
+			if(!mainMatcher->featureTracking(prevImage, image, f1Points, f2Points, status))
+				return false;
 
-		// Compute R and t
-		fivePoint(f1Keypoints, f2Keypoints, matches12);
+			// Compute R and t
+			fivePoint(f1Points, f2Points);
 
-		// Compute 3D points
-		triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
+			// Compute 3D points
+			triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
 
-		// Compute scale
-		correctScale(worldPoints);
+			// Compute scale
+			correctScale(worldPoints);
 
-		vector<double> tr_delta = transformationVec(R, t);
+			vector<double> tr_delta = transformationVec(R, t);
 
-		Tr_delta = transformationMat(tr_delta);
+			Tr_delta = transformationMat(tr_delta);
 
-		swapAll();
+			if(f1Points.size() < 1000)
+			{
+				if(!mainMatcher->computeFeatures(prevImage, f1Points))
+					return false;
+				if(!mainMatcher->featureTracking(prevImage, image, f1Points, f2Points, status))
+					return false;
+			}
+			prevImage = image.clone();
+			f1Points.clear();
+			f1Points= f2Points;
+		}
 	}
 	frameNr++;
 	return true;
@@ -101,6 +145,36 @@ void Odometry::fivePoint(const vector<KeyPoint> &xp,
 		{
 			pMatchedPoints[j] = pMTemp[i];
 			cMatchedPoints[j] = cMTemp[i];
+			j++;
+		}
+	}
+}
+
+void Odometry::fivePoint(const vector<Point2f> &xp,
+						 const vector<Point2f> &x)
+{
+	inliers.release();
+
+	pMatchedPoints.clear();
+	cMatchedPoints.clear();
+
+	E = findEssentialMat(xp, x,
+						 K, RANSAC, param.odParam.ransacProb,
+						 param.odParam.ransacError, inliers);
+
+	// Recover R and t from E
+	recoverPose(E, xp, x, K, R, t, inliers);
+
+	int32_t N = sum(inliers)[0];
+	int32_t j = 0;
+	pMatchedPoints.resize(N);
+	cMatchedPoints.resize(N);
+	for(int i = 0; i < (int) inliers.rows; i++)
+	{
+		if(inliers.at<uint8_t>(i) == 1)
+		{
+			pMatchedPoints[j] = Point2d(xp[i].x, xp[i].y);
+			cMatchedPoints[j] = Point2d( x[i].x,  x[i].y);
 			j++;
 		}
 	}

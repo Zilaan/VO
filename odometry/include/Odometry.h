@@ -31,6 +31,7 @@ public:
 		double ransacProb;
 		int scaling;
 		double motionThreshold;
+		int method;
 		odometryParameters()
 		{
 			/*
@@ -50,6 +51,7 @@ public:
 			ransacProb       = 0.99;
 			scaling          = 1;
 			motionThreshold  = 100;
+			method           = 0;
 		}
 	};
 
@@ -102,9 +104,12 @@ public:
 
 private:
 	// Estimate motion
-	void fivePoint(const std::vector<cv::KeyPoint> &x,
-				   const std::vector<cv::KeyPoint> &xp,
+	void fivePoint(const std::vector<cv::KeyPoint> &xp,
+				   const std::vector<cv::KeyPoint> &x,
 				   std::vector<cv::DMatch> &matches);
+
+	void fivePoint(const std::vector<cv::Point2f> &xp,
+				   const std::vector<cv::Point2f> &x);
 
 	void swapAll();
 
@@ -161,6 +166,7 @@ private:
 	cv::Mat f2Descriptors;
 	cv::Mat f3Descriptors;
 	cv::Mat inliers;
+	cv::Mat prevImage;
 
 	// Matches from three frames
 	std::vector<cv::DMatch> matches12;
@@ -173,8 +179,11 @@ private:
 
 	// Keypoints from the three frames
 	std::vector<cv::KeyPoint> f1Keypoints;
+	std::vector<cv::Point2f> f1Points;
 	std::vector<cv::KeyPoint> f2Keypoints;
+	std::vector<cv::Point2f> f2Points;
 	std::vector<cv::KeyPoint> f3Keypoints;
+	std::vector<uchar> status;
 
 	std::vector<cv::Point3d> X12;
 	std::vector<cv::Point3d> X13;
