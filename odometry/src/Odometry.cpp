@@ -83,6 +83,8 @@ bool Odometry::process(const Mat &image)
 
 			// Compute R and t
 			fivePoint(f1Points, f2Points);
+			if(pMatchedPoints.size() < 100)
+				return false;
 
 			// Compute 3D points
 			triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
