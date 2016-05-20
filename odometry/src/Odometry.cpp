@@ -56,7 +56,12 @@ bool Odometry::process(const Mat &image)
 			triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
 
 			// Compute scale
-			correctScale(worldPoints);
+			if(param.odParam.scaling == 1)
+				correctScale(worldPoints);
+			else if (param.odParam.scaling == 2)
+				getTrueScale(frameNr);
+			else
+				;
 
 			vector<double> tr_delta = transformationVec(R, t);
 
@@ -90,7 +95,12 @@ bool Odometry::process(const Mat &image)
 			triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
 
 			// Compute scale
-			correctScale(worldPoints);
+			if(param.odParam.scaling == 1)
+				correctScale(worldPoints);
+			else if (param.odParam.scaling == 2)
+				getTrueScale(frameNr);
+			else
+				;
 
 			vector<double> tr_delta = transformationVec(R, t);
 
@@ -364,21 +374,50 @@ void Odometry::correctScale(vector<Point3d> &points)
 	double pitch = param.odParam.pitch;
 	double trueHeight = param.odParam.cameraHeight;
 
-	if(param.odParam.scaling == 0) // No scaling
-	{
-		return;
-	}
-	else if(param.odParam.scaling == 1) // Scaling
-	{
-		// Compute the scaling factor
-		if(gaussKernel(pitch, points, estHeight, param.odParam.motionThreshold))
-			rho = trueHeight / estHeight;
+	// Compute the scaling factor
+	if(gaussKernel(pitch, points, estHeight, param.odParam.motionThreshold))
+		rho = trueHeight / estHeight;
 
-		t = t * rho;
-	}
-	else // Height estimation but no scaling
+	t = t * rho;
+}
+
+bool Odometry::getTrueScale(int frame_id)
+{
+
+	string line;
+	int i = 0;
+	ifstream myfile ("/Users/Raman/Documents/Programmering/opencv/VO/odometry/data/poses/00.txt");
+	double x = 0, y = 0, z = 0;
+	double x_prev, y_prev, z_prev;
+
+	if (myfile.is_open())
 	{
-		// Compute the scaling factor
-		gaussKernel(pitch, points, estHeight, param.odParam.motionThreshold);
+		while (( getline (myfile, line) ) && (i <= frame_id))
+		{
+			z_prev = z;
+			x_prev = x;
+			y_prev = y;
+			std::istringstream in(line);
+			//cout << line << '\n';
+			for (int j = 0; j < 12; j++)
+			{
+				in >> z ;
+				if (j == 7) y = z;
+				if (j == 3)  x = z;
+			}
+
+			i++;
+		}
+		myfile.close();
 	}
+
+	else
+	{
+		cout << "Unable to open file\n";
+		return false;
+	}
+	rho = sqrt((x - x_prev) * (x - x_prev) + (y - y_prev) * (y - y_prev) + (z - z_prev) * (z - z_prev));
+	t = t * rho;
+
+	return true;
 }

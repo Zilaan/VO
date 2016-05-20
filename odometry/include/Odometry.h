@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#include <sstream>
+#include <fstream>
 
 class Odometry
 {
@@ -146,6 +148,8 @@ private:
 	void computeProjection();
 
 	void correctScale(std::vector<cv::Point3d> &points);
+
+	bool getTrueScale(int frame_id);
 
 	// Matcher object
 	Matcher *mainMatcher;
