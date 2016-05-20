@@ -89,7 +89,10 @@ public:
 
 	int32_t getNumKeypoints()
 	{
-		return f1Keypoints.size();
+		if(param.odParam.method == 0)
+			return (int32_t) f1Keypoints.size();
+		else
+			return (int32_t) status.size();
 	}
 
 	int32_t getNumInliers()
@@ -99,7 +102,10 @@ public:
 
 	int32_t getNumMatches()
 	{
-		return matches12.size();
+		if(param.odParam.method == 0)
+			return (int32_t) matches12.size();
+		else
+			return (int32_t) f1Points.size();
 	}
 
 private:
