@@ -85,6 +85,16 @@ bool Odometry::process(const Mat &image)
 			// and compute pose using Nister's five point
 			if(!mainMatcher->featureTracking(prevImage, image, f1Points, f2Points, status))
 				return false;
+			int found = 0;
+			if(frameNr > 2)
+			{
+				for(int i = 0; i < status.size(); i++)
+				{
+					if(status.at(i) == 1 && inliers.at<uint8_t>(i) == 1)
+						found++;
+				}
+			}
+			cout << "Status: " << sum(status)[0] << " Inliers :" << sum(inliers)[0] << " Found: " << found << endl;
 
 			// Compute R and t
 			fivePoint(f1Points, f2Points);
