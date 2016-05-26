@@ -1,3 +1,0 @@
-struct RepError1
-{
-};
