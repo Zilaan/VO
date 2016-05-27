@@ -49,11 +49,11 @@ public:
 
 			pnpFlags         = cv::SOLVEPNP_P3P;
 			ransacIterations = 2000;
-			ransacError      = 2;
+			ransacError      = 1;
 			ransacProb       = 0.99;
-			scaling          = 1;
+			scaling          = 2;
 			motionThreshold  = 100;
-			method           = 0;
+			method           = 1;
 		}
 	};
 
@@ -130,7 +130,7 @@ private:
 					   std::vector<cv::DMatch> &shared1,
 					   std::vector<cv::DMatch> &shared2);
 
-	void pnp(const std::vector<cv::Point3d> &X,
+	bool pnp(const std::vector<cv::Point3d> &X,
 			 const std::vector<cv::Point2d> &x);
 
 	void sharedFeatures(const std::vector<cv::KeyPoint> &k1,
@@ -178,6 +178,9 @@ private:
 	cv::Mat inliers;
 	cv::Mat prevImage;
 
+	cv::Mat rvec;
+	cv::Mat tvec;
+
 	// Matches from three frames
 	std::vector<cv::DMatch> matches12;
 	std::vector<cv::DMatch> matches13;
@@ -193,6 +196,7 @@ private:
 	std::vector<cv::KeyPoint> f2Keypoints;
 	std::vector<cv::Point2f> f2Points;
 	std::vector<cv::KeyPoint> f3Keypoints;
+	std::vector<cv::Point2f> f3Points;
 	std::vector<uchar> status;
 
 	std::vector<cv::Point3d> X12;
@@ -201,6 +205,9 @@ private:
 
 	std::vector<cv::Point2d> pMatchedPoints;
 	std::vector<cv::Point2d> cMatchedPoints;
+
+	std::vector<cv::Point2d> f1Double, f2Double, f3Double;
+	std::vector<cv::Point3d> TriangPoints;
 	int frameNr;
 };
 

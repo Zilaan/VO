@@ -79,22 +79,12 @@ bool Odometry::process(const Mat &image)
 				return false;
 			prevImage = image.clone();
 		}
-		else
+		else if(frameNr == 2)
 		{
 			// Second frame available, match features with previous frame
 			// and compute pose using Nister's five point
 			if(!mainMatcher->featureTracking(prevImage, image, f1Points, f2Points, status))
 				return false;
-			int found = 0;
-			if(frameNr > 2)
-			{
-				for(int i = 0; i < status.size(); i++)
-				{
-					if(status.at(i) == 1 && inliers.at<uint8_t>(i) == 1)
-						found++;
-				}
-			}
-			cout << "Status: " << sum(status)[0] << " Inliers :" << sum(inliers)[0] << " Found: " << found << endl;
 
 			// Compute R and t
 			fivePoint(f1Points, f2Points);
@@ -124,8 +114,67 @@ bool Odometry::process(const Mat &image)
 					return false;
 			}
 			prevImage = image.clone();
+		}
+		else
+		{
+			if(!mainMatcher->featureTracking(prevImage, image, f2Points, f3Points, status))
+				return false;
+
+			// Get shared features
+			if(frameNr == 3)
+			{
+				for(int i = 0; i < status.size(); i++)
+				{
+					if(status.at(i) == 1 && inliers.at<uint8_t>(i) == 1)
+					{
+						f1Double.push_back(pMatchedPoints[i]);
+						f2Double.push_back(cMatchedPoints[i]);
+						f3Double.push_back(Point2d(f3Points[i].x, f3Points[i].y));
+						TriangPoints.push_back(worldPoints[i]);
+					}
+				}
+			}
+			else
+			{
+				f1Double.clear();
+				f2Double.clear();
+				f3Double.clear();
+				TriangPoints.clear();
+				cout << "Rows: " << inliers.rows << endl;
+				uint32_t idx;
+				for(int i = 0; i < inliers.rows; i++)
+
+					idx = inliers.at<uint8_t>(i);
+					if(status.at(idx) == 1)
+					{
+						f1Double.push_back(Point2d(f1Points[idx].x, f1Points[idx].y));
+						f2Double.push_back(Point2d(f2Points[idx].x, f2Points[idx].y));
+						f3Double.push_back(Point2d(f3Points[i].x, f3Points[i].y));
+						TriangPoints.push_back(worldPoints[i]);
+					}
+				}
+			}
+
+			pnp(TriangPoints, f3Double);
+			// Bunlde adjustment now or later?
+			triangulate(f2Double, f3Double, worldPoints);
+
+			vector<double> tr_delta = transformationVec(R, t);
+
+			Tr_delta = transformationMat(tr_delta);
+
+			if(f1Points.size() < 1000)
+			{
+				if(!mainMatcher->computeFeatures(prevImage, f1Points))
+					return false;
+				if(!mainMatcher->featureTracking(prevImage, image, f1Points, f2Points, status))
+					return false;
+			}
+			prevImage = image.clone();
 			f1Points.clear();
 			f1Points= f2Points;
+			f2Points.clear();
+			f2Points= f3Points;
 		}
 	}
 	frameNr++;
@@ -268,23 +317,25 @@ void Odometry::sharedMatches(const vector<DMatch> &m1,
 	}
 }
 
-void Odometry::pnp(const vector<Point3d> &X,
+bool Odometry::pnp(const vector<Point3d> &X,
 				   const vector<Point2d> &x)
 {
+	inliers.release();
 	Mat distCoeffs = Mat::zeros(4, 1, CV_64FC1);  // vector of distortion coefficients
-	Mat rvec = Mat::zeros(3, 1, CV_64FC1); // output rotation vector
-	Mat tvec = Mat::zeros(3, 1, CV_64FC1); // output translation vector
+	rvec = Mat::zeros(3, 1, CV_64FC1); // output rotation vector
+	tvec = Mat::zeros(3, 1, CV_64FC1); // output translation vector
 	bool useExtrinsicGuess = false;
 
 	solvePnPRansac(X, x, K, distCoeffs, rvec, tvec, useExtrinsicGuess,
 				   param.odParam.ransacIterations,
 				   param.odParam.ransacError,
 				   param.odParam.ransacProb,
-				   noArray(),
+				   inliers,
 				   param.odParam.pnpFlags);
 
 	Rodrigues(rvec, R); // Convert rotation vector to matrix
 	t = tvec;
+	return true;
 }
 
 void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
