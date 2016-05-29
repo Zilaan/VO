@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(VisualOdometry)
 find_package(OpenCV)
+find_package(Ceres REQUIRED)
 set(target viso)
 SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/bin)
@@ -15,6 +16,6 @@ set(matcher_headers
 	include/Matcher.h
 	include/Scale.h
 )
-include_directories(${OpenCV_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${OpenCV_INCLUDE_DIRS} ${CERES_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_executable(${target} src/main_viso.cpp ${matcher_src} ${matcher_headers})
-target_link_libraries(${target} ${OpenCV_LIBS})
+target_link_libraries(${target} ${OpenCV_LIBS} ${CERES_LIBRARIES})
