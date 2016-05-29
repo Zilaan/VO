@@ -4,11 +4,119 @@
 #include "Matcher.h"
 #include "Scale.h"
 #include <math.h>
+#include <numeric>
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#include "ceres/ceres.h"
+#include "ceres/rotation.h"
 
 using namespace std;
 using namespace cv;
+
+struct PrevError
+{
+	PrevError(double x, double y, const vector<double> &K, const vector<double> &M)
+	{
+		observed_x = x;
+		observed_y = y;
+		camera = &K[0];
+		transformation = &M[0];
+	}
+
+	template <typename T>
+	bool operator()(const T* const point, T* residuals) const
+	{
+		T p[3];
+
+		// Rotate
+		p[0] = T(transformation[0] * point[0] + transformation[1] * point[1] + transformation[2] * point[2]);
+		p[1] = T(transformation[4] * point[0] + transformation[5] * point[1] + transformation[6] * point[2]);
+		p[2] = T(transformation[8] * point[0] + transformation[9] * point[1] + transformation[10] * point[2]);
+
+		// Translate
+		p[0] += T(transformation[3]);
+		p[1] += T(transformation[7]);
+		p[2] += T(transformation[11]);
+
+		T xp = p[0] / p[2];
+		T yp = p[1] / p[2];
+
+		T focal = T(camera[0]);
+		T cu    = T(camera[2]);
+		T cv    = T(camera[5]);
+
+		T predicted_x = focal * xp + cu;
+		T predicted_y = focal * yp + cv;
+
+		residuals[0] = predicted_x - T(observed_x);
+		residuals[1] = predicted_y - T(observed_y);
+		return true;
+	}
+
+	static ceres::CostFunction* Create(const double x,
+	                                   const double y,
+									   const vector<double> &K,
+									   const vector<double> &M)
+	{
+		return (new ceres::AutoDiffCostFunction<PrevError, 2, 3>(
+		            new PrevError(x, y, K ,M)));
+	}
+
+	double observed_x;
+	double observed_y;
+	const double *camera;
+	const double *transformation;
+};
+
+struct CurrError
+{
+	CurrError(double x, double y, const vector<double> &K)
+	{
+		observed_x = x;
+		observed_y = y;
+		camera = &K[0];
+	}
+
+	template <typename T>
+	bool operator()(const T* const M, const T* const point, T* residuals) const
+	{
+		T p[3];
+
+		// Rotate
+		ceres::AngleAxisRotatePoint(M, point, p);
+
+		// Translate
+		p[0] += M[3];
+		p[1] += M[4];
+		p[2] += M[5];
+
+		T xp = p[0] / p[2];
+		T yp = p[1] / p[2];
+
+		T focal = T(camera[0]);
+		T cu    = T(camera[2]);
+		T cv    = T(camera[5]);
+
+		T predicted_x = focal * xp + cu;
+		T predicted_y = focal * yp + cv;
+
+		residuals[0] = predicted_x - T(observed_x);
+		residuals[1] = predicted_y - T(observed_y);
+		return true;
+	}
+
+	static ceres::CostFunction* Create(const double x,
+	                                   const double y,
+									   const vector<double> &K)
+	{
+		return (new ceres::AutoDiffCostFunction<CurrError, 2, 6, 3>(
+		            new CurrError(x, y, K)));
+	}
+
+	double observed_x;
+	double observed_y;
+	const double *camera;
+};
 
 Odometry::Odometry(parameters param) : param(param), frameNr(1)
 {
@@ -116,18 +224,27 @@ bool Odometry::process(const Mat &image)
 			prevImage = image.clone();
 			f1Points.clear();
 			f1Points= f2Points;
+			retrack = false;
 		}
 		else
 		{
 			if(!mainMatcher->featureTracking(prevImage, image, f2Points, f3Points, status))
 				return false;
 
-			// Get shared points for Bundle
+			// Get shared points and do Bundle Adjustment if we didn't retrack
+			if(!retrack)
+			{
+				sharedPoints(inliers, status);
+			}
 
 			// Compute R and t
 			fivePoint(f2Points, f3Points);
 			if(pMatchedPoints.size() < 100)
 				return false;
+
+			vector<double> tr_bundle;
+			if(!retrack)
+				tr_bundle = bundle();
 
 			// Compute 3D points
 			triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
@@ -142,13 +259,18 @@ bool Odometry::process(const Mat &image)
 
 			vector<double> tr_delta = transformationVec(R, t);
 
-			Tr_delta = transformationMat(tr_delta);
+			if(retrack)
+				Tr_delta = transformationMat(tr_delta);
+			else
+				Tr_delta = transformationMat(tr_bundle);
 
+			retrack = false;
 			if(f1Points.size() < 1000)
 			{
-				if(!mainMatcher->computeFeatures(prevImage, f1Points))
+				retrack = true;
+				if(!mainMatcher->computeFeatures(prevImage, f2Points))
 					return false;
-				if(!mainMatcher->featureTracking(prevImage, image, f1Points, f2Points, status))
+				if(!mainMatcher->featureTracking(prevImage, image, f2Points, f3Points, status))
 					return false;
 			}
 			prevImage = image.clone();
@@ -156,6 +278,7 @@ bool Odometry::process(const Mat &image)
 			f1Points = f2Points;
 			f2Points.clear();
 			f2Points = f3Points;
+			f3Points.clear();
 		}
 	}
 	frameNr++;
@@ -215,6 +338,8 @@ void Odometry::fivePoint(const vector<Point2f> &xp,
 						 param.odParam.ransacError, inliers);
 
 	// Recover R and t from E
+	prevR = R.clone();
+	prevT = t.clone();
 	recoverPose(E, xp, x, K, R, t, inliers);
 
 	int32_t N = sum(inliers)[0];
@@ -438,7 +563,6 @@ bool Odometry::getTrueScale(int frame_id)
 			x_prev = x;
 			y_prev = y;
 			std::istringstream in(line);
-			//cout << line << '\n';
 			for (int j = 0; j < 12; j++)
 			{
 				in >> z ;
@@ -460,4 +584,144 @@ bool Odometry::getTrueScale(int frame_id)
 	t = t * rho;
 
 	return true;
+}
+
+void Odometry::sharedPoints(const Mat &inl, const vector<uchar> &s23)
+{
+	vector<int8_t> s1, s2;
+	int8_t i, s;
+	int8_t shOR, inOR;
+
+	// Get logical vectors for the shared elements using 'inliers' from
+	// the five points method and 'status' from the tracker
+	for(uint32_t j = 0; j < s23.size(); j++)
+	{
+		i = (int8_t) inl.at<uint8_t>(j);
+		s = (int8_t) s23.at(j);
+		shOR = (int8_t) (i * (s + 1)) - 1;
+		inOR = (int8_t) (s * (i + 1)) - 1;
+
+		if(shOR != -1)
+			s1.push_back(shOR);
+		if(inOR != -1)
+			s2.push_back(inOR);
+	}
+
+	f1Double.clear();
+	f2Double.clear();
+	f3Double.clear();
+	TriangPoints.clear();
+
+	for(int i = 0; i < (uint32_t) s1.size(); i++)
+	{
+		if(s1.at(i) == 1)
+		{
+			f1Double.push_back(pMatchedPoints[i]);
+			f2Double.push_back(cMatchedPoints[i]);
+			TriangPoints.push_back(worldPoints[i]);
+		}
+	}
+
+	for(int i = 0; i < (uint32_t) s2.size(); i++)
+	{
+		if(s2.at(i) == 1)
+			f3Double.push_back( Point2d(f3Points[i].x, f3Points[i].y) );
+	}
+}
+
+vector<double> Odometry::bundle()
+{
+	Point3d *Pptr = &TriangPoints[0]; // Pointer to 3D points
+
+	// Pointer to feature points
+	Point2d *p1 = &f1Double[0];
+	Point2d *p2 = &f2Double[0];
+	Point2d *p3 = &f3Double[0];
+
+	// Vector for previous M, current M and K
+	vector<double> prevM, currM, Kmat, initM;
+
+	Mat prevM2 = Mat::zeros(3, 4, CV_64FC1);
+	Mat initM2 = Mat::zeros(3, 4, CV_64FC1);
+	Mat eyeR   = Mat::eye(3, 3, CV_64FC1);
+	Mat zeroT  = Mat::zeros(3, 1, CV_64FC1);
+
+	// prevM2 = [R|t]
+	prevR.copyTo(prevM2(Range(0, 3), Range(0, 3)));
+	prevT.copyTo(prevM2.col(3));
+
+	// initM = [I|0]
+	eyeR.copyTo(initM2(Range(0, 3), Range(0, 3)));
+	zeroT.copyTo(initM2.col(3));
+
+	// currM = [rx ry rz tx ty tz]
+	double *currMptr = new double[6];
+	currM = transformationVec(R, t);
+	for(int i = 0; i < 6; i++)
+		*(currMptr + i) = currM[i];
+
+	initM.assign((double *)initM2.datastart, (double *)initM2.dataend);
+	prevM.assign((double *)prevM2.datastart, (double *)prevM2.dataend);
+	Kmat.assign((double *)K.datastart, (double *)K.dataend);
+
+	uint32_t numElements = (uint32_t) TriangPoints.size();
+	double *points3d = new double[3 * numElements];
+
+	// Populate 3D points
+	for(int i = 0; i < (uint32_t)TriangPoints.size(); i++)
+	{
+		*(points3d + i * 3 + 0) = TriangPoints[i].x;
+		*(points3d + i * 3 + 1) = TriangPoints[i].y;
+		*(points3d + i * 3 + 2) = TriangPoints[i].z;
+	}
+
+	int numPoints = 50;
+	if(numElements > 500)
+		numPoints = 500;
+	else
+		numPoints = numElements;
+
+	//clock_t start = clock();
+	// Create CERES prblem
+	ceres::Problem problem;
+	for(uint32_t i = 0; i < numPoints; i++)
+	{
+		// First image
+		ceres::CostFunction* cost_function =
+			PrevError::Create( (p1 + i)->x, (p1 + i)->y, Kmat, initM);
+		problem.AddResidualBlock(cost_function,
+								 NULL,
+								 (points3d + i * 3) );
+
+		// Second image
+		ceres::CostFunction* cost_function2 =
+			PrevError::Create( (p2 + i)->x, (p2 + i)->y, Kmat, prevM);
+		problem.AddResidualBlock(cost_function2,
+								 NULL,
+								 (points3d + i * 3) );
+
+		// Third image
+		ceres::CostFunction* cost_function3 =
+			CurrError::Create( (p2 + i)->x, (p2 + i)->y, Kmat);
+		problem.AddResidualBlock(cost_function3,
+								 NULL,
+								 currMptr,
+								 (points3d + i * 3) );
+	}
+
+	ceres::Solver::Options options;
+	options.linear_solver_type = ceres::DENSE_SCHUR;
+	options.minimizer_progress_to_stdout = false;
+
+	ceres::Solver::Summary summary;
+	ceres::Solve(options, &problem, &summary);
+	//cout << summary.FullReport() << endl;
+
+	//clock_t end = clock();
+	//cout << double(end - start) / CLOCKS_PER_SEC << endl;
+
+	for(int i = 0; i < 6; i++)
+		currM[i] = *(currMptr + i);
+
+	return currM;
 }
