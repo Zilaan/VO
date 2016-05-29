@@ -41,19 +41,19 @@ public:
 			 * parameters from above
 			 */
 
-			f  = 645.2;
-			cu = 635.9;
-			cv = 194.1;
+			f  = 718.856;
+			cu = 607.1928;
+			cv = 185.2157;
 			cameraHeight = 1.6;
 			pitch = -0.08;
 
 			pnpFlags         = cv::SOLVEPNP_P3P;
 			ransacIterations = 2000;
-			ransacError      = 2;
-			ransacProb       = 0.99;
+			ransacError      = 1;
+			ransacProb       = 0.999;
 			scaling          = 1;
 			motionThreshold  = 100;
-			method           = 0;
+			method           = 1;
 		}
 	};
 
@@ -151,6 +151,10 @@ private:
 
 	bool getTrueScale(int frame_id);
 
+	void sharedPoints(const cv::Mat &inl, const std::vector<uchar> &s23);
+
+	std::vector<double> bundle();
+
 	// Matcher object
 	Matcher *mainMatcher;
 
@@ -160,7 +164,9 @@ private:
 	cv::Mat K;  // Intrisic parameters for camera
 	cv::Mat E;  // Essential matrix
 	cv::Mat R;  // Rotation matrix
+	cv::Mat prevR;  // Rotation matrix
 	cv::Mat t;  // Translation vector
+	cv::Mat prevT;  // Translation vector
 	cv::Mat Tr_delta; // Previous and current trans matrix
 	double rho; // Scale factor
 	double estHeight; // Estimated height by kernel
@@ -208,6 +214,8 @@ private:
 	std::vector<cv::Point2d> pMatchedPoints;
 	std::vector<cv::Point2d> cMatchedPoints;
 	int frameNr;
+	
+	bool retrack;
 };
 
 #endif // ODOMETRY_H
