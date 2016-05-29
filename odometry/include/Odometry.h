@@ -7,6 +7,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <sstream>
 #include <fstream>
+#include <numeric>
 
 class Odometry
 {
@@ -151,6 +152,9 @@ private:
 
 	bool getTrueScale(int frame_id);
 
+	void sharedPoints(const cv::Mat &inl, const std::vector<uchar> &s23,
+							std::vector<char> &s1, std::vector<char> &s2);
+
 	// Matcher object
 	Matcher *mainMatcher;
 
@@ -176,6 +180,7 @@ private:
 	cv::Mat f2Descriptors;
 	cv::Mat f3Descriptors;
 	cv::Mat inliers;
+	//std::vector<char> inliers;
 	cv::Mat prevImage;
 
 	cv::Mat rvec;
