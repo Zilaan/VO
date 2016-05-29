@@ -193,7 +193,13 @@ private:
 	std::vector<cv::KeyPoint> f2Keypoints;
 	std::vector<cv::Point2f> f2Points;
 	std::vector<cv::KeyPoint> f3Keypoints;
+	std::vector<cv::Point2f> f3Points;
 	std::vector<uchar> status;
+
+	std::vector<cv::Point2d> f1Double;
+	std::vector<cv::Point2d> f2Double;
+	std::vector<cv::Point2d> f3Double;
+	std::vector<cv::Point3d> TriangPoints;
 
 	std::vector<cv::Point3d> X12;
 	std::vector<cv::Point3d> X13;
