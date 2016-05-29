@@ -153,7 +153,7 @@ private:
 	bool getTrueScale(int frame_id);
 
 	void sharedPoints(const cv::Mat &inl, const std::vector<uchar> &s23,
-							std::vector<char> &s1, std::vector<char> &s2);
+							std::vector<int8_t> &s1, std::vector<int8_t> &s2);
 
 	// Matcher object
 	Matcher *mainMatcher;
@@ -212,6 +212,7 @@ private:
 	std::vector<cv::Point2d> cMatchedPoints;
 
 	std::vector<cv::Point2d> f1Double, f2Double, f3Double;
+	std::vector<cv::Point2d> f1Temp, f2Temp;
 	std::vector<cv::Point3d> TriangPoints;
 	int frameNr;
 };
