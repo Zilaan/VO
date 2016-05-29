@@ -79,22 +79,12 @@ bool Odometry::process(const Mat &image)
 				return false;
 			prevImage = image.clone();
 		}
-		else
+		else if(frameNr == 2)
 		{
 			// Second frame available, match features with previous frame
 			// and compute pose using Nister's five point
 			if(!mainMatcher->featureTracking(prevImage, image, f1Points, f2Points, status))
 				return false;
-			int found = 0;
-			if(frameNr > 2)
-			{
-				for(int i = 0; i < status.size(); i++)
-				{
-					if(status.at(i) == 1 && inliers.at<uint8_t>(i) == 1)
-						found++;
-				}
-			}
-			cout << "Status: " << sum(status)[0] << " Inliers :" << sum(inliers)[0] << " Found: " << found << endl;
 
 			// Compute R and t
 			fivePoint(f1Points, f2Points);
@@ -126,6 +116,46 @@ bool Odometry::process(const Mat &image)
 			prevImage = image.clone();
 			f1Points.clear();
 			f1Points= f2Points;
+		}
+		else
+		{
+			if(!mainMatcher->featureTracking(prevImage, image, f2Points, f3Points, status))
+				return false;
+
+			// Get shared points for Bundle
+
+			// Compute R and t
+			fivePoint(f2Points, f3Points);
+			if(pMatchedPoints.size() < 100)
+				return false;
+
+			// Compute 3D points
+			triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
+
+			// Compute scale
+			if(param.odParam.scaling == 1)
+				correctScale(worldPoints);
+			else if (param.odParam.scaling == 2)
+				getTrueScale(frameNr);
+			else
+				;
+
+			vector<double> tr_delta = transformationVec(R, t);
+
+			Tr_delta = transformationMat(tr_delta);
+
+			if(f1Points.size() < 1000)
+			{
+				if(!mainMatcher->computeFeatures(prevImage, f1Points))
+					return false;
+				if(!mainMatcher->featureTracking(prevImage, image, f1Points, f2Points, status))
+					return false;
+			}
+			prevImage = image.clone();
+			f1Points.clear();
+			f1Points = f2Points;
+			f2Points.clear();
+			f2Points = f3Points;
 		}
 	}
 	frameNr++;
