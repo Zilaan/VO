@@ -25,7 +25,7 @@ public:
 		int bucketing;
 		parameters()
 		{
-			extractor  = 1;
+			extractor  = 2;
 			descriptor = 0;
 			matcher    = 2;
 			bucketing  = 0;
