@@ -120,18 +120,28 @@ bool Odometry::process(const Mat &image)
 			if(!mainMatcher->featureTracking(prevImage, image, f2Points, f3Points, status))
 				return false;
 
+			vector<char> s1, s2;
+			sharedPoints(inliers, status, s1, s2);
+			cout << "S1: " << accumulate(s1.begin(), s1.end(), 0) << endl;
+			cout << "S2: " << accumulate(s2.begin(), s2.end(), 0) << endl;;
+
 			// Get shared features
 			if(frameNr == 3)
 			{
-				for(int i = 0; i < status.size(); i++)
+				for(int i = 0; i < s1.size(); i++)
 				{
-					if(status.at(i) == 1 && inliers.at<uint8_t>(i) == 1)
+					if(s1.at(i) != 0)
 					{
 						f1Double.push_back(pMatchedPoints[i]);
 						f2Double.push_back(cMatchedPoints[i]);
-						f3Double.push_back(Point2d(f3Points[i].x, f3Points[i].y));
 						TriangPoints.push_back(worldPoints[i]);
 					}
+				}
+
+				for(int i = 0; i < s2.size(); i++)
+				{
+					if(s2.at(i) != 0)
+						f3Double.push_back( Point2d( f3Points[i].x, f3Points[i].y ) );
 				}
 			}
 			else
@@ -140,18 +150,29 @@ bool Odometry::process(const Mat &image)
 				f2Double.clear();
 				f3Double.clear();
 				TriangPoints.clear();
-				cout << "Rows: " << inliers.rows << endl;
 				uint32_t idx;
-				for(int i = 0; i < inliers.rows; i++)
-
-					idx = inliers.at<uint8_t>(i);
-					if(status.at(idx) == 1)
+				for(int i = 0; i < s1.size(); i++)
+				{
+					if(s1.at(i) !=j0)
 					{
-						f1Double.push_back(Point2d(f1Points[idx].x, f1Points[idx].y));
-						f2Double.push_back(Point2d(f2Points[idx].x, f2Points[idx].y));
-						f3Double.push_back(Point2d(f3Points[i].x, f3Points[i].y));
-						TriangPoints.push_back(worldPoints[i]);
+						f1Double.push_back
+						f2Double.push_back
+						TriangPoints.push_back
 					}
+					//idx = inliers.at<uint8_t>(i);
+					//if(status.at(idx) == 1)
+					//{
+					//	f1Double.push_back(Point2d(f1Points[idx].x, f1Points[idx].y));
+					//	f2Double.push_back(Point2d(f2Points[idx].x, f2Points[idx].y));
+					//	f3Double.push_back(Point2d(f3Points[i].x, f3Points[i].y));
+					//	TriangPoints.push_back(worldPoints[i]);
+					//}
+				}
+
+				for(int i = 0; i < s2.size(); i++)
+				{
+					if(s2.at(i) != 0)
+						f3Double.push_back
 				}
 			}
 
@@ -240,7 +261,7 @@ void Odometry::fivePoint(const vector<Point2f> &xp,
 	int32_t j = 0;
 	pMatchedPoints.resize(N);
 	cMatchedPoints.resize(N);
-	for(int i = 0; i < (int) inliers.rows; i++)
+	for(int i = 0; i < inliers.rows; i++)
 	{
 		if(inliers.at<uint8_t>(i) == 1)
 		{
@@ -321,6 +342,7 @@ bool Odometry::pnp(const vector<Point3d> &X,
 				   const vector<Point2d> &x)
 {
 	inliers.release();
+	Mat inl;
 	Mat distCoeffs = Mat::zeros(4, 1, CV_64FC1);  // vector of distortion coefficients
 	rvec = Mat::zeros(3, 1, CV_64FC1); // output rotation vector
 	tvec = Mat::zeros(3, 1, CV_64FC1); // output translation vector
@@ -330,8 +352,21 @@ bool Odometry::pnp(const vector<Point3d> &X,
 				   param.odParam.ransacIterations,
 				   param.odParam.ransacError,
 				   param.odParam.ransacProb,
-				   inliers,
+				   inl,
 				   param.odParam.pnpFlags);
+	if(inl.rows < 100)
+	{
+		cout << "\t\tToo few inliers in PNP\n";
+		return false;
+	}
+
+	inliers = Mat::zeros(x.size(), 1, CV_8UC1);
+	int idx;
+	for(int i = 0; i < inl.rows; i ++)
+	{
+		idx = inl.at<uint8_t>(i);
+		inliers.at<uint8_t>(idx) = 1;
+	}
 
 	Rodrigues(rvec, R); // Convert rotation vector to matrix
 	t = tvec;
@@ -459,7 +494,6 @@ bool Odometry::getTrueScale(int frame_id)
 			x_prev = x;
 			y_prev = y;
 			std::istringstream in(line);
-			//cout << line << '\n';
 			for (int j = 0; j < 12; j++)
 			{
 				in >> z ;
@@ -481,4 +515,25 @@ bool Odometry::getTrueScale(int frame_id)
 	t = t * rho;
 
 	return true;
+}
+
+void Odometry::sharedPoints(const Mat &inl, const vector<uchar> &s23,
+							vector<char> &s1, vector<char> &s2)
+{
+	s1.clear();
+	s2.clear();
+	char shOR, inOR, i, s;
+
+	for(uint32_t j = 0; j < s23.size(); j++)
+	{
+		i = inl.at<uint8_t>(j);
+		s = s23.at(j);
+		shOR = ( i * ( s + 1 ) ) - 1;
+		inOR = ( s * ( i + 1 ) ) - 1;
+
+		if(shOR != -1)
+			s1.push_back(shOR);
+		if(inOR != -1)
+			s2.push_back(inOR);
+	}
 }
