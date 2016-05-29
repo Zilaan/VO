@@ -120,7 +120,7 @@ bool Odometry::process(const Mat &image)
 			if(!mainMatcher->featureTracking(prevImage, image, f2Points, f3Points, status))
 				return false;
 
-			vector<char> s1, s2;
+			vector<int8_t> s1, s2;
 			sharedPoints(inliers, status, s1, s2);
 			cout << "S1: " << accumulate(s1.begin(), s1.end(), 0) << endl;
 			cout << "S2: " << accumulate(s2.begin(), s2.end(), 0) << endl;;
@@ -128,55 +128,15 @@ bool Odometry::process(const Mat &image)
 			// Get shared features
 			if(frameNr == 3)
 			{
-				for(int i = 0; i < s1.size(); i++)
-				{
-					if(s1.at(i) != 0)
-					{
-						f1Double.push_back(pMatchedPoints[i]);
-						f2Double.push_back(cMatchedPoints[i]);
-						TriangPoints.push_back(worldPoints[i]);
-					}
-				}
-
-				for(int i = 0; i < s2.size(); i++)
-				{
-					if(s2.at(i) != 0)
-						f3Double.push_back( Point2d( f3Points[i].x, f3Points[i].y ) );
-				}
 			}
 			else
 			{
-				f1Double.clear();
-				f2Double.clear();
-				f3Double.clear();
-				TriangPoints.clear();
-				uint32_t idx;
-				for(int i = 0; i < s1.size(); i++)
-				{
-					if(s1.at(i) !=j0)
-					{
-						f1Double.push_back
-						f2Double.push_back
-						TriangPoints.push_back
-					}
-					//idx = inliers.at<uint8_t>(i);
-					//if(status.at(idx) == 1)
-					//{
-					//	f1Double.push_back(Point2d(f1Points[idx].x, f1Points[idx].y));
-					//	f2Double.push_back(Point2d(f2Points[idx].x, f2Points[idx].y));
-					//	f3Double.push_back(Point2d(f3Points[i].x, f3Points[i].y));
-					//	TriangPoints.push_back(worldPoints[i]);
-					//}
-				}
-
-				for(int i = 0; i < s2.size(); i++)
-				{
-					if(s2.at(i) != 0)
-						f3Double.push_back
-				}
 			}
 
 			pnp(TriangPoints, f3Double);
+			cout << "f3Double: " << f3Double.size() << endl;
+			cout << "PNP inl size: " << inliers.rows << endl;
+			cout << "PNP inliers: " << sum(inliers)[0] << endl;
 			// Bunlde adjustment now or later?
 			triangulate(f2Double, f3Double, worldPoints);
 
@@ -360,12 +320,12 @@ bool Odometry::pnp(const vector<Point3d> &X,
 		return false;
 	}
 
-	inliers = Mat::zeros(x.size(), 1, CV_8UC1);
+	inliers = Mat::zeros((uint32_t) x.size(), 1, CV_8UC1);
 	int idx;
-	for(int i = 0; i < inl.rows; i ++)
+	for(int i = 0; i < inl.rows; i++)
 	{
-		idx = inl.at<uint8_t>(i);
-		inliers.at<uint8_t>(idx) = 1;
+		idx = inl.at<int>(i);
+		inliers.at<uint8_t>(idx) = (uint8_t) 1;
 	}
 
 	Rodrigues(rvec, R); // Convert rotation vector to matrix
@@ -518,18 +478,19 @@ bool Odometry::getTrueScale(int frame_id)
 }
 
 void Odometry::sharedPoints(const Mat &inl, const vector<uchar> &s23,
-							vector<char> &s1, vector<char> &s2)
+							vector<int8_t> &s1, vector<int8_t> &s2)
 {
 	s1.clear();
 	s2.clear();
-	char shOR, inOR, i, s;
+	int8_t i, s;
+	int8_t shOR, inOR;
 
 	for(uint32_t j = 0; j < s23.size(); j++)
 	{
-		i = inl.at<uint8_t>(j);
-		s = s23.at(j);
-		shOR = ( i * ( s + 1 ) ) - 1;
-		inOR = ( s * ( i + 1 ) ) - 1;
+		i = (int8_t) inl.at<uint8_t>(j);
+		s = (int8_t) s23.at(j);
+		shOR = (int8_t) (i * (s + 1)) - 1;
+		inOR = (int8_t) (s * (i + 1)) - 1;
 
 		if(shOR != -1)
 			s1.push_back(shOR);
