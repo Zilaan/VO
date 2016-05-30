@@ -34,6 +34,8 @@ public:
 		int scaling;
 		double motionThreshold;
 		int method;
+		int bundle;
+		int bundleParam;
 		odometryParameters()
 		{
 			/*
@@ -54,6 +56,8 @@ public:
 			scaling          = 1;
 			motionThreshold  = 100;
 			method           = 1;
+			bundle           = 0;
+			bundleParam      = 500;
 		}
 	};
 

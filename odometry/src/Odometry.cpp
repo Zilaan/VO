@@ -129,6 +129,9 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	K.at<double>(1, 1) = param.odParam.f;
 	K.at<double>(1, 2) = param.odParam.cv;
 
+	if(param.odParam.bundle == 1)
+		cout << "Bundling activated with param: " << param.odParam.bundleParam << endl;
+
 	rho = 1.0;
 }
 
@@ -232,7 +235,7 @@ bool Odometry::process(const Mat &image)
 				return false;
 
 			// Get shared points and do Bundle Adjustment if we didn't retrack
-			if(!retrack)
+			if(!retrack && param.odParam.bundle)
 			{
 				sharedPoints(inliers, status);
 			}
@@ -243,7 +246,7 @@ bool Odometry::process(const Mat &image)
 				return false;
 
 			vector<double> tr_bundle;
-			if(!retrack)
+			if(!retrack && param.odParam.bundle)
 				tr_bundle = bundle();
 
 			// Compute 3D points
@@ -259,7 +262,7 @@ bool Odometry::process(const Mat &image)
 
 			vector<double> tr_delta = transformationVec(R, t);
 
-			if(retrack)
+			if(retrack && !param.odParam.bundle)
 				Tr_delta = transformationMat(tr_delta);
 			else
 				Tr_delta = transformationMat(tr_bundle);
@@ -676,8 +679,8 @@ vector<double> Odometry::bundle()
 	}
 
 	int numPoints = 50;
-	if(numElements > 500)
-		numPoints = 500;
+	if(numElements > param.odParam.bundleParam)
+		numPoints = param.odParam.bundleParam;
 	else
 		numPoints = numElements;
 
