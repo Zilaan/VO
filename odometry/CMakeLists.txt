@@ -3,6 +3,7 @@ project(VisualOdometry)
 find_package(OpenCV)
 find_package(Ceres REQUIRED)
 set(target viso)
+set (CMAKE_CXX_FLAGS "-Os -Wall")
 SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/bin)
 set(matcher_src
