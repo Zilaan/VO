@@ -129,8 +129,8 @@ Odometry::Odometry(parameters param) : param(param), frameNr(1)
 	K.at<double>(1, 1) = param.odParam.f;
 	K.at<double>(1, 2) = param.odParam.cv;
 
-	if(param.odParam.bundle == 1)
-		cout << "Bundling activated with param: " << param.odParam.bundleParam << endl;
+	optimParam = param.odParam.bundleParam;
+	bundleAdj = param.odParam.doBundle;
 
 	rho = 1.0;
 }
@@ -148,23 +148,33 @@ bool Odometry::process(const Mat &image)
 		if(frameNr == 1)
 		{
 			// Frist frame, compute only keypoints and descriptors
-			if(!mainMatcher->computeDescriptors(image, f1Descriptors, f1Keypoints))
+			if(!mainMatcher->computeDescriptors(image, f1Descriptors, f2Keypoints))
 				return false;
 		}
 		else
 		{
 			// Second frame available, match features with previous frame
 			// and compute pose using Nister's five point
-			if(!mainMatcher->computeDescriptors(image, f2Descriptors, f2Keypoints))
+			if(!mainMatcher->computeDescriptors(image, f2Descriptors, f3Keypoints))
 				return false;
-			if(!mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches12))
+			if(!mainMatcher->fastMatcher(f1Descriptors, f2Descriptors, matches23))
 				return false;
 
 			// Compute R and t
-			fivePoint(f1Keypoints, f2Keypoints, matches12);
+			fivePoint(f2Keypoints, f3Keypoints, matches23);
+			if(pMatchedPoints.size() < 50)
+				return false;
 
-			// Compute 3D points
-			triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
+			vector<double> tr_bundle;
+			if(frameNr > 2 && (bundleAdj == 1))
+			{
+				sharedPoints(matches12, matches23);
+
+				// Compute 3D points
+				triangulate(f1Double, f2Double, TriangPoints);
+
+				tr_bundle = bundle();
+			}
 
 			// Compute scale
 			if(param.odParam.scaling == 1)
@@ -176,7 +186,11 @@ bool Odometry::process(const Mat &image)
 
 			vector<double> tr_delta = transformationVec(R, t);
 
-			Tr_delta = transformationMat(tr_delta);
+			if(frameNr > 2 && (bundleAdj == 1))
+			//if(false)
+				Tr_delta = transformationMat(tr_bundle);
+			else
+				Tr_delta = transformationMat(tr_delta);
 
 			swapAll();
 		}
@@ -235,18 +249,19 @@ bool Odometry::process(const Mat &image)
 				return false;
 
 			// Get shared points and do Bundle Adjustment if we didn't retrack
-			if(!retrack && param.odParam.bundle)
+			if(!retrack && (bundleAdj == 1) )
 			{
-				sharedPoints(inliers, status);
+				//sharedPoints(inliers, status);
+				;
 			}
 
 			// Compute R and t
 			fivePoint(f2Points, f3Points);
-			if(pMatchedPoints.size() < 100)
+			if(pMatchedPoints.size() < 30)
 				return false;
 
 			vector<double> tr_bundle;
-			if(!retrack && param.odParam.bundle)
+			if( (!retrack) && (bundleAdj == 1) )
 				tr_bundle = bundle();
 
 			// Compute 3D points
@@ -262,13 +277,13 @@ bool Odometry::process(const Mat &image)
 
 			vector<double> tr_delta = transformationVec(R, t);
 
-			if(retrack && !param.odParam.bundle)
+			if(retrack || (bundleAdj == 0))
 				Tr_delta = transformationMat(tr_delta);
 			else
 				Tr_delta = transformationMat(tr_bundle);
 
 			retrack = false;
-			if(f1Points.size() < 1000)
+			if(f1Points.size() < 2000)
 			{
 				retrack = true;
 				if(!mainMatcher->computeFeatures(prevImage, f2Points))
@@ -292,7 +307,9 @@ void Odometry::fivePoint(const vector<KeyPoint> &xp,
 						 const vector<KeyPoint> &x,
 						 vector<DMatch> &matches)
 {
-	inliers.release();
+	inliers1.release();
+	if(frameNr >= 2)
+		inliers1 = inliers2.clone();
 	vector<Point2d> pMTemp, cMTemp;
 
 	pMatchedPoints.clear();
@@ -308,18 +325,20 @@ void Odometry::fivePoint(const vector<KeyPoint> &xp,
 
 	E = findEssentialMat(pMTemp, cMTemp,
 						 K, RANSAC, param.odParam.ransacProb,
-						 param.odParam.ransacError, inliers);
+						 param.odParam.ransacError, inliers2);
 
 	// Recover R and t from E
-	recoverPose(E, pMTemp, cMTemp, K, R, t, inliers);
+	prevR = R.clone();
+	prevT = t.clone();
+	recoverPose(E, pMTemp, cMTemp, K, R, t, inliers2);
 
-	int32_t N = sum(inliers)[0];
+	int32_t N = sum(inliers2)[0];
 	int32_t j = 0;
 	pMatchedPoints.resize(N);
 	cMatchedPoints.resize(N);
-	for(int i = 0; i < (int) inliers.rows; i++)
+	for(int i = 0; i < (int) inliers2.rows; i++)
 	{
-		if(inliers.at<uint8_t>(i) == 1)
+		if(inliers2.at<uint8_t>(i) == 1)
 		{
 			pMatchedPoints[j] = pMTemp[i];
 			cMatchedPoints[j] = cMTemp[i];
@@ -331,27 +350,29 @@ void Odometry::fivePoint(const vector<KeyPoint> &xp,
 void Odometry::fivePoint(const vector<Point2f> &xp,
 						 const vector<Point2f> &x)
 {
-	inliers.release();
+	inliers1.release();
+	if(frameNr >= 2)
+		inliers1 = inliers2.clone();
 
 	pMatchedPoints.clear();
 	cMatchedPoints.clear();
 
 	E = findEssentialMat(xp, x,
 						 K, RANSAC, param.odParam.ransacProb,
-						 param.odParam.ransacError, inliers);
+						 param.odParam.ransacError, inliers2);
 
 	// Recover R and t from E
 	prevR = R.clone();
 	prevT = t.clone();
-	recoverPose(E, xp, x, K, R, t, inliers);
+	recoverPose(E, xp, x, K, R, t, inliers2);
 
-	int32_t N = sum(inliers)[0];
+	int32_t N = sum(inliers2)[0];
 	int32_t j = 0;
 	pMatchedPoints.resize(N);
 	cMatchedPoints.resize(N);
-	for(int i = 0; i < (int) inliers.rows; i++)
+	for(int i = 0; i < (int) inliers2.rows; i++)
 	{
-		if(inliers.at<uint8_t>(i) == 1)
+		if(inliers2.at<uint8_t>(i) == 1)
 		{
 			pMatchedPoints[j] = Point2d(xp[i].x, xp[i].y);
 			cMatchedPoints[j] = Point2d( x[i].x,  x[i].y);
@@ -370,11 +391,11 @@ void Odometry::swapAll()
 	f1Keypoints.clear();
 	f1Keypoints = f2Keypoints;
 	f2Keypoints.clear();
-	//f2Keypoints = f3Keypoints;
+	f2Keypoints = f3Keypoints;
 
 	// Swap matches
-	//matches12.clear();
-	//matches12 = matches23;
+	matches12.clear();
+	matches12 = matches23;
 
 	//sharedMatches12.clear();
 	//sharedMatches12 = sharedMatches23;
@@ -556,7 +577,7 @@ bool Odometry::getTrueScale(int frame_id)
 	int i = 0;
 	ifstream myfile ("/Users/Raman/Documents/Programmering/opencv/VO/odometry/data/poses/00.txt");
 	double x = 0, y = 0, z = 0;
-	double x_prev, y_prev, z_prev;
+	double x_prev = 0, y_prev = 0, z_prev = 0;
 
 	if (myfile.is_open())
 	{
@@ -589,52 +610,31 @@ bool Odometry::getTrueScale(int frame_id)
 	return true;
 }
 
-void Odometry::sharedPoints(const Mat &inl, const vector<uchar> &s23)
+void Odometry::sharedPoints(const Mat &inl, const Mat &inl2, const vector<uchar> &s23)
 {
-	vector<int8_t> s1, s2;
-	int8_t i, s;
-	int8_t shOR, inOR;
-
-	// Get logical vectors for the shared elements using 'inliers' from
-	// the five points method and 'status' from the tracker
-	for(uint32_t j = 0; j < s23.size(); j++)
+	const uint32_t NS23 = s23.size();
+	uint8_t *newS23 = new uint8_t[NS23];
+	uint8_t *newInliers = new uint8_t[NS23];
+	for(int j = 0, i = 0; i < NS23; i++)
 	{
-		i = (int8_t) inl.at<uint8_t>(j);
-		s = (int8_t) s23.at(j);
-		shOR = (int8_t) (i * (s + 1)) - 1;
-		inOR = (int8_t) (s * (i + 1)) - 1;
-
-		if(shOR != -1)
-			s1.push_back(shOR);
-		if(inOR != -1)
-			s2.push_back(inOR);
-	}
-
-	f1Double.clear();
-	f2Double.clear();
-	f3Double.clear();
-	TriangPoints.clear();
-
-	for(int i = 0; i < (uint32_t) s1.size(); i++)
-	{
-		if(s1.at(i) == 1)
+		if(s23.at(i) == 1)
 		{
-			f1Double.push_back(pMatchedPoints[i]);
-			f2Double.push_back(cMatchedPoints[i]);
-			TriangPoints.push_back(worldPoints[i]);
+			newS23[i] = inl2.at<uint8_t>(j);
+			j++;
 		}
+		else
+			newS23[i] = 0;
+
+		newInliers[i] = newS23[i];
 	}
 
-	for(int i = 0; i < (uint32_t) s2.size(); i++)
-	{
-		if(s2.at(i) == 1)
-			f3Double.push_back( Point2d(f3Points[i].x, f3Points[i].y) );
-	}
+	delete [] newS23;
+	delete [] newInliers;
 }
 
 vector<double> Odometry::bundle()
 {
-	Point3d *Pptr = &TriangPoints[0]; // Pointer to 3D points
+	//Point3d *Pptr = &TriangPoints[0]; // Pointer to 3D points
 
 	// Pointer to feature points
 	Point2d *p1 = &f1Double[0];
@@ -659,9 +659,14 @@ vector<double> Odometry::bundle()
 
 	// currM = [rx ry rz tx ty tz]
 	double *currMptr = new double[6];
-	currM = transformationVec(R, t);
-	for(int i = 0; i < 6; i++)
-		*(currMptr + i) = currM[i];
+	//currM = transformationVec(R, t);
+	Mat rvec;
+	Rodrigues(R, rvec);
+	for(int i = 0; i < 3; i++)
+	{
+		*(currMptr + i)     = rvec.at<double>(i);
+		*(currMptr + i + 3) = t.at<double>(i);
+	}
 
 	initM.assign((double *)initM2.datastart, (double *)initM2.dataend);
 	prevM.assign((double *)prevM2.datastart, (double *)prevM2.dataend);
@@ -679,8 +684,8 @@ vector<double> Odometry::bundle()
 	}
 
 	int numPoints = 50;
-	if(numElements > param.odParam.bundleParam)
-		numPoints = param.odParam.bundleParam;
+	if(numElements > optimParam)
+		numPoints = optimParam;
 	else
 		numPoints = numElements;
 
@@ -705,7 +710,7 @@ vector<double> Odometry::bundle()
 
 		// Third image
 		ceres::CostFunction* cost_function3 =
-			CurrError::Create( (p2 + i)->x, (p2 + i)->y, Kmat);
+			CurrError::Create( (p3 + i)->x, (p3 + i)->y, Kmat);
 		problem.AddResidualBlock(cost_function3,
 								 NULL,
 								 currMptr,
@@ -723,8 +728,48 @@ vector<double> Odometry::bundle()
 	//clock_t end = clock();
 	//cout << double(end - start) / CLOCKS_PER_SEC << endl;
 
-	for(int i = 0; i < 6; i++)
-		currM[i] = *(currMptr + i);
+	rvec = Mat::zeros(3, 1, CV_64FC1); // output rotation vector
+
+	for(int i = 0; i < 3; i++)
+	{
+		rvec.at<double>(i) = *(currMptr + i);
+		t.at<double>(i) = *(currMptr + i + 3);
+	}
+
+	Rodrigues(rvec, R);
+	currM = transformationVec(R, t);
+	cout << "CERES DONE\n";
+	delete[] currMptr;
+	delete[] points3d;
 
 	return currM;
+}
+
+void Odometry::sharedPoints(const vector<DMatch> &m1,
+							const vector<DMatch> &m2)
+{
+	f1Double.clear();
+	f2Double.clear();
+	f3Double.clear();
+	TriangPoints.clear();
+	int i, j;
+
+	vector<DMatch>::const_iterator it2, it1;
+	for(i = 0, it1 = m1.begin(); it1 != m1.end(); ++it1, i++)
+	{
+		for(j = 0, it2 = m2.begin(); it2 != m2.end(); ++it2, j++)
+		{
+			if(it2->queryIdx == it1->trainIdx)
+			{
+				if( inliers1.at<uint8_t>(i) == 1 && inliers2.at<uint8_t>(j) == 1)
+				{
+					f1Double.push_back( f1Keypoints[i].pt );
+					f2Double.push_back( f2Keypoints[i].pt );
+					f3Double.push_back( f3Keypoints[j].pt );
+					//TriangPoints.push_back( worldPoints[i] );
+					break;
+				}
+			}
+		}
+	}
 }
