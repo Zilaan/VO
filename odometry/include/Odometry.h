@@ -34,7 +34,7 @@ public:
 		int scaling;
 		double motionThreshold;
 		int method;
-		int bundle;
+		int doBundle;
 		int bundleParam;
 		odometryParameters()
 		{
@@ -53,10 +53,10 @@ public:
 			ransacIterations = 2000;
 			ransacError      = 1;
 			ransacProb       = 0.999;
-			scaling          = 1;
+			scaling          = 2;
 			motionThreshold  = 100;
 			method           = 1;
-			bundle           = 0;
+			doBundle         = 1;
 			bundleParam      = 500;
 		}
 	};
@@ -111,7 +111,12 @@ public:
 		if(param.odParam.method == 0)
 			return (int32_t) matches12.size();
 		else
-			return (int32_t) f1Points.size();
+		{
+			if(frameNr <= 2)
+				return (int32_t) f1Points.size();
+			else
+				return (int32_t) f2Points.size();
+		}
 	}
 
 private:
@@ -155,9 +160,12 @@ private:
 
 	bool getTrueScale(int frame_id);
 
-	void sharedPoints(const cv::Mat &inl, const std::vector<uchar> &s23);
+	void sharedPoints(const cv::Mat &inl, const cv::Mat &inl2, const std::vector<uchar> &s23);
 
 	std::vector<double> bundle();
+
+	void sharedPoints(const std::vector<cv::DMatch> &m1,
+					  const std::vector<cv::DMatch> &m2);
 
 	// Matcher object
 	Matcher *mainMatcher;
@@ -186,6 +194,8 @@ private:
 	cv::Mat f2Descriptors;
 	cv::Mat f3Descriptors;
 	cv::Mat inliers;
+	cv::Mat inliers1;
+	cv::Mat inliers2;
 	cv::Mat prevImage;
 
 	// Matches from three frames
@@ -220,6 +230,8 @@ private:
 	int frameNr;
 	
 	bool retrack;
+	int bundleAdj;
+	int optimParam;
 };
 
 #endif // ODOMETRY_H
