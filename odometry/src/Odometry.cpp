@@ -13,6 +13,29 @@
 using namespace std;
 using namespace cv;
 
+template<typename T, typename V, typename K, typename F>
+void removePoints(vector<T> &f1, vector<V> &f2, vector<K> &f3, vector<F> &t, const vector<uchar> &status)
+{
+	vector<T> oldf1 = f1;
+	vector<V> oldf2 = f2;
+	vector<K> oldf3 = f3;
+	vector<F> oldt = t;
+	f1.clear();
+	f2.clear();
+	f3.clear();
+	t.clear();
+	for(int i = 0; i < (uint32_t)status.size(); i++)
+	{
+		if(status[i])
+		{
+			f1.push_back(oldf1[i]);
+			f2.push_back(oldf2[i]);
+			f3.push_back(oldf3[i]);
+			t.push_back(oldt[i]);
+		}
+	}
+}
+
 struct PrevError
 {
 	PrevError(double x, double y, const vector<double> &K, const vector<double> &M)
@@ -162,7 +185,7 @@ bool Odometry::process(const Mat &image)
 
 			// Compute R and t
 			fivePoint(f2Keypoints, f3Keypoints, matches23);
-			if(pMatchedPoints.size() < 50)
+			if(pMatchedPoints.size() < 10)
 				return false;
 
 			vector<double> tr_bundle;
@@ -172,6 +195,31 @@ bool Odometry::process(const Mat &image)
 
 				// Compute 3D points
 				triangulate(f1Double, f2Double, TriangPoints);
+
+				Mat temprvec = Mat::zeros(1, 3, CV_64FC1);
+				Mat temptvec = Mat::zeros(1, 3, CV_64FC1);
+
+				vector<Point2d> reprPoints;
+				projectPoints(TriangPoints, temprvec, temptvec, K, Mat(), reprPoints);
+
+				double reproError = norm(Mat(reprPoints), Mat(f1Double), NORM_L2) / (double)f1Double.size();
+
+				vector<uchar> status(f1Double.size(), 0);
+				for(int i = 0; i < (uint32_t)f1Double.size(); i++)
+					status[i] = (norm(f1Double[i] - reprPoints[i]) < 20.0);
+
+				removePoints(f1Double, f2Double, f3Double, TriangPoints, status);
+
+				Rodrigues(R, temprvec);
+				projectPoints(TriangPoints, temprvec, t, K, Mat(), reprPoints);
+
+				reproError = norm(Mat(reprPoints), Mat(f3Double), NORM_L2) / (double)f3Double.size();
+
+				vector<uchar> status2(f1Double.size(), 0);
+				for(int i = 0; i < (uint32_t)f1Double.size(); i++)
+					status2[i] = (norm(f3Double[i] - reprPoints[i]) < 10.0);
+
+				removePoints(f1Double, f2Double, f3Double, TriangPoints, status2);
 
 				tr_bundle = bundle();
 			}
@@ -187,7 +235,6 @@ bool Odometry::process(const Mat &image)
 			vector<double> tr_delta = transformationVec(R, t);
 
 			if(frameNr > 2 && (bundleAdj == 1))
-			//if(false)
 				Tr_delta = transformationMat(tr_bundle);
 			else
 				Tr_delta = transformationMat(tr_delta);
@@ -425,28 +472,6 @@ bool Odometry::triangulate(const vector<Point2d> &xp,
 	return true;
 }
 
-void Odometry::sharedMatches(const vector<DMatch> &m1,
-							 const vector<DMatch> &m2,
-							 vector<DMatch> &shared1,
-							 vector<DMatch> &shared2)
-{
-	shared1.clear();
-	shared2.clear();
-	vector<DMatch>::const_iterator it2, it1;
-	for(it1 = m1.begin(); it1 != m1.end(); ++it1)
-	{
-		for(it2 = m2.begin(); it2 != m2.end(); ++it2)
-		{
-			if(it2->queryIdx == it1->trainIdx)
-			{
-				shared1.push_back(*it1);
-				shared2.push_back(*it2);
-				break;
-			}
-		}
-	}
-}
-
 void Odometry::pnp(const vector<Point3d> &X,
 				   const vector<Point2d> &x)
 {
@@ -464,22 +489,6 @@ void Odometry::pnp(const vector<Point3d> &X,
 
 	Rodrigues(rvec, R); // Convert rotation vector to matrix
 	t = tvec;
-}
-
-void Odometry::sharedFeatures(const vector<KeyPoint> &k1,
-							  const vector<KeyPoint> &k2,
-							  vector<Point2d> &gk1,
-							  vector<Point2d> &gk2,
-							  const vector<DMatch> &mask)
-{
-	gk1.clear();
-	gk2.clear();
-	vector<DMatch>::const_iterator it;
-	for(it = mask.begin(); it != mask.end(); ++it)
-	{
-		gk1.push_back(k1[it->queryIdx].pt);
-		gk2.push_back(k2[it->trainIdx].pt);
-	}
 }
 
 void Odometry::fromHomogeneous(const Mat &Pt4f, vector<Point3d> &Pt3f)
@@ -554,10 +563,6 @@ Mat Odometry::transformationMat(const vector<double> &tr)
 	return Tr;
 }
 
-void Odometry::computeProjection()
-{
-}
-
 void Odometry::correctScale(vector<Point3d> &points)
 {
 	double pitch = param.odParam.pitch;
@@ -575,7 +580,29 @@ bool Odometry::getTrueScale(int frame_id)
 
 	string line;
 	int i = 0;
-	ifstream myfile ("/Users/Raman/Documents/Programmering/opencv/VO/odometry/data/poses/00.txt");
+	int seq = param.odParam.imageSequence;
+	ifstream myfile;
+	
+	switch (seq) {
+		case 0:
+			myfile.open("/Users/Raman/Documents/Programmering/opencv/VO/odometry/data/poses/00.txt");
+			break;
+		case 1:
+			myfile.open("/Users/Raman/Documents/Programmering/opencv/VO/odometry/data/poses/01.txt");
+			break;
+		case 2:
+			myfile.open("/Users/Raman/Documents/Programmering/opencv/VO/odometry/data/poses/02.txt");
+			break;
+		case 3:
+			myfile.open("/Users/Raman/Documents/Programmering/opencv/VO/odometry/data/poses/03.txt");
+			break;
+		case 4:
+			myfile.open("/Users/Raman/Documents/Programmering/opencv/VO/odometry/data/poses/04.txt");
+			break;
+		default:
+			myfile.open("/Users/Raman/Documents/Programmering/opencv/VO/odometry/data/poses/00.txt");
+	}
+
 	double x = 0, y = 0, z = 0;
 	double x_prev = 0, y_prev = 0, z_prev = 0;
 
@@ -688,6 +715,7 @@ vector<double> Odometry::bundle()
 		numPoints = optimParam;
 	else
 		numPoints = numElements;
+	numPoints = numElements;
 
 	//clock_t start = clock();
 	// Create CERES prblem
@@ -763,10 +791,9 @@ void Odometry::sharedPoints(const vector<DMatch> &m1,
 			{
 				if( inliers1.at<uint8_t>(i) == 1 && inliers2.at<uint8_t>(j) == 1)
 				{
-					f1Double.push_back( f1Keypoints[i].pt );
-					f2Double.push_back( f2Keypoints[i].pt );
-					f3Double.push_back( f3Keypoints[j].pt );
-					//TriangPoints.push_back( worldPoints[i] );
+					f1Double.push_back( f1Keypoints[it1->queryIdx].pt );
+					f2Double.push_back( f2Keypoints[it1->trainIdx].pt );
+					f3Double.push_back( f3Keypoints[it2->trainIdx].pt );
 					break;
 				}
 			}
