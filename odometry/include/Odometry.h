@@ -36,6 +36,7 @@ public:
 		int method;
 		int doBundle;
 		int bundleParam;
+		int imageSequence;
 		odometryParameters()
 		{
 			/*
@@ -58,6 +59,7 @@ public:
 			method           = 1;
 			doBundle         = 1;
 			bundleParam      = 500;
+			imageSequence    = 0;
 		}
 	};
 
@@ -134,27 +136,14 @@ private:
 					 const std::vector<cv::Point2d> &x,
 					 std::vector<cv::Point3d> &X);
 
-	void sharedMatches(const std::vector<cv::DMatch> &m1,
-					   const std::vector<cv::DMatch> &m2,
-					   std::vector<cv::DMatch> &shared1,
-					   std::vector<cv::DMatch> &shared2);
-
 	void pnp(const std::vector<cv::Point3d> &X,
 			 const std::vector<cv::Point2d> &x);
-
-	void sharedFeatures(const std::vector<cv::KeyPoint> &k1,
-						const std::vector<cv::KeyPoint> &k2,
-						std::vector<cv::Point2d> &gk1,
-						std::vector<cv::Point2d> &gk2,
-						const std::vector<cv::DMatch> &mask);
 
 	void fromHomogeneous(const cv::Mat &Pt4f, std::vector<cv::Point3d> &Pt3f);
 
 	std::vector<double> transformationVec(const cv::Mat &RMat, const cv::Mat &tvec);
 
 	cv::Mat transformationMat(const std::vector<double> &tr);
-
-	void computeProjection();
 
 	void correctScale(std::vector<cv::Point3d> &points);
 
@@ -183,9 +172,6 @@ private:
 	double rho; // Scale factor
 	double estHeight; // Estimated height by kernel
 
-	// Keypoints filtered with shared matches
-	std::vector<cv::Point2d> goodF1Key, goodF2Key, goodF3Key;
-
 	// Triangulated Euclidean points
 	std::vector<cv::Point3d> worldPoints;
 
@@ -203,10 +189,6 @@ private:
 	std::vector<cv::DMatch> matches13;
 	std::vector<cv::DMatch> matches23;
 
-	// Shared matches
-	std::vector<cv::DMatch> sharedMatches12;
-	std::vector<cv::DMatch> sharedMatches23;
-
 	// Keypoints from the three frames
 	std::vector<cv::KeyPoint> f1Keypoints;
 	std::vector<cv::Point2f> f1Points;
@@ -220,10 +202,6 @@ private:
 	std::vector<cv::Point2d> f2Double;
 	std::vector<cv::Point2d> f3Double;
 	std::vector<cv::Point3d> TriangPoints;
-
-	std::vector<cv::Point3d> X12;
-	std::vector<cv::Point3d> X13;
-	std::vector<cv::Point3d> X23;
 
 	std::vector<cv::Point2d> pMatchedPoints;
 	std::vector<cv::Point2d> cMatchedPoints;
