@@ -17,3 +17,4 @@ tags
 build
 .ycm_*
 copier.sh
+odometry/res
