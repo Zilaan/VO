@@ -9,6 +9,7 @@ img
 *cmake_install.cmake
 bin
 *main*
+!odometry/src/main_viso.cpp
 Makefile
 *pseudo.md
 *cscope.out
