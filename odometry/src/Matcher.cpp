@@ -17,18 +17,19 @@ Matcher::Matcher(parameters param) : _ratio(0.8f)
 //			 75,				// nFeatures
 //			 1.7f,				// scaleFactor
 //			 8,					// nlevels
-//			 7,						// edgeThreshold
+//			 7,					// edgeThreshold
 //			 0,					// firstLevel
 //			 2,					// WTA_K
 //			 ORB::HARRIS_SCORE, // scoreType
-//			 7,						// patchSize
+//			 7,					// patchSize
 //			 20					// fastThreshold
 //);
 	Ptr<FeatureDetector> ext;
 	switch (param.extractor)
 	{
 		case 0:
-			ext =  FastFeatureDetector::create(20, true, FastFeatureDetector::TYPE_9_16);
+			//ext =  FastFeatureDetector::create(20, true, FastFeatureDetector::TYPE_9_16);
+			ext =  FastFeatureDetector::create(25, true, FastFeatureDetector::TYPE_9_16);
 			break;
 
 		case 1:
@@ -36,7 +37,8 @@ Matcher::Matcher(parameters param) : _ratio(0.8f)
 			break;
 
 		case 2:
-			ext = SURF::create();
+			//ext = SURF::create();
+			ext = SURF::create(400, 4, 2, false, false);
 			break;
 
 		case 3:
@@ -118,6 +120,7 @@ bool Matcher::computeDescriptors(const Mat &image, Mat &descriptors,
 	int xd = 310;
 	vector<KeyPoint> tempKey;
 
+	// Not used
 	if(bucketing == 1)
 	{
 		for(int i = 0; i < 2; i++)

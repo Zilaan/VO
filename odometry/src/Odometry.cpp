@@ -189,40 +189,40 @@ bool Odometry::process(const Mat &image)
 				return false;
 
 			vector<double> tr_bundle;
-			if(frameNr > 2 && (bundleAdj == 1))
-			{
-				sharedPoints(matches12, matches23);
+			//if(frameNr > 2 && (bundleAdj == 1))
+			//{
+			//	sharedPoints(matches12, matches23);
 
-				// Compute 3D points
-				triangulate(f1Double, f2Double, TriangPoints);
+			//	// Compute 3D points
+			//	triangulate(f1Double, f2Double, TriangPoints);
 
-				Mat temprvec = Mat::zeros(1, 3, CV_64FC1);
-				Mat temptvec = Mat::zeros(1, 3, CV_64FC1);
+			//	Mat temprvec = Mat::zeros(1, 3, CV_64FC1);
+			//	Mat temptvec = Mat::zeros(1, 3, CV_64FC1);
 
-				vector<Point2d> reprPoints;
-				projectPoints(TriangPoints, temprvec, temptvec, K, Mat(), reprPoints);
+			//	vector<Point2d> reprPoints;
+			//	projectPoints(TriangPoints, temprvec, temptvec, K, Mat(), reprPoints);
 
-				double reproError = norm(Mat(reprPoints), Mat(f1Double), NORM_L2) / (double)f1Double.size();
+			//	double reproError = norm(Mat(reprPoints), Mat(f1Double), NORM_L2) / (double)f1Double.size();
 
-				vector<uchar> status(f1Double.size(), 0);
-				for(int i = 0; i < (uint32_t)f1Double.size(); i++)
-					status[i] = (norm(f1Double[i] - reprPoints[i]) < 20.0);
+			//	vector<uchar> status(f1Double.size(), 0);
+			//	for(int i = 0; i < (uint32_t)f1Double.size(); i++)
+			//		status[i] = (norm(f1Double[i] - reprPoints[i]) < 20.0);
 
-				removePoints(f1Double, f2Double, f3Double, TriangPoints, status);
+			//	removePoints(f1Double, f2Double, f3Double, TriangPoints, status);
 
-				Rodrigues(R, temprvec);
-				projectPoints(TriangPoints, temprvec, t, K, Mat(), reprPoints);
+			//	Rodrigues(R, temprvec);
+			//	projectPoints(TriangPoints, temprvec, t, K, Mat(), reprPoints);
 
-				reproError = norm(Mat(reprPoints), Mat(f3Double), NORM_L2) / (double)f3Double.size();
+			//	reproError = norm(Mat(reprPoints), Mat(f3Double), NORM_L2) / (double)f3Double.size();
 
-				vector<uchar> status2(f1Double.size(), 0);
-				for(int i = 0; i < (uint32_t)f1Double.size(); i++)
-					status2[i] = (norm(f3Double[i] - reprPoints[i]) < 10.0);
+			//	vector<uchar> status2(f1Double.size(), 0);
+			//	for(int i = 0; i < (uint32_t)f1Double.size(); i++)
+			//		status2[i] = (norm(f3Double[i] - reprPoints[i]) < 10.0);
 
-				removePoints(f1Double, f2Double, f3Double, TriangPoints, status2);
+			//	removePoints(f1Double, f2Double, f3Double, TriangPoints, status2);
 
-				tr_bundle = bundle();
-			}
+			//	tr_bundle = bundle();
+			//}
 
 			// Compute scale
 			if(param.odParam.scaling == 1)
@@ -260,11 +260,11 @@ bool Odometry::process(const Mat &image)
 
 			// Compute R and t
 			fivePoint(f1Points, f2Points);
-			if(pMatchedPoints.size() < 100)
+			if(pMatchedPoints.size() < 30)
 				return false;
 
 			// Compute 3D points
-			triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
+			//triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
 
 			// Compute scale
 			if(param.odParam.scaling == 1)
@@ -278,7 +278,7 @@ bool Odometry::process(const Mat &image)
 
 			Tr_delta = transformationMat(tr_delta);
 
-			if(f1Points.size() < 1000)
+			if(f1Points.size() < 500)
 			{
 				if(!mainMatcher->computeFeatures(prevImage, f1Points))
 					return false;
@@ -312,7 +312,7 @@ bool Odometry::process(const Mat &image)
 				tr_bundle = bundle();
 
 			// Compute 3D points
-			triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
+			//triangulate(pMatchedPoints, cMatchedPoints, worldPoints);
 
 			// Compute scale
 			if(param.odParam.scaling == 1)
@@ -330,7 +330,7 @@ bool Odometry::process(const Mat &image)
 				Tr_delta = transformationMat(tr_bundle);
 
 			retrack = false;
-			if(f1Points.size() < 2000)
+			if(f1Points.size() < 1000)
 			{
 				retrack = true;
 				if(!mainMatcher->computeFeatures(prevImage, f2Points))

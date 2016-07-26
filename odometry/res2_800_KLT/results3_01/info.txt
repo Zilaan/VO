@@ -1,0 +1,7 @@
+extractor        = 3
+ransacError      = 0.500000
+ransacProb       = 0.999000
+imageSequence    = 1
+
+Total time: 300.761361 sec
+Time/frame: 0.273171 sec/frame

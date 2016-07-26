@@ -58,7 +58,7 @@ public:
 			motionThreshold  = 100;
 			method           = 1;
 			doBundle         = 1;
-			bundleParam      = 500;
+			bundleParam      = 20;
 			imageSequence    = 0;
 		}
 	};

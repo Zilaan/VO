@@ -13,12 +13,39 @@ using namespace cv;
 // 01 1101
 // 02 4661
 // 03 801
-// 04 271
-const int lastFrame = 1034;
+// 04 4662
+const int lastFrame = 1101;
+
+void writeInfo(Odometry::parameters &p, double t)
+{
+	FILE *myfile = fopen("/Users/Raman/Documents/Programmering/opencv/VO/odometry/results/info.txt", "w");
+
+	if(p.odParam.method == 0)
+	{
+		fprintf(myfile, "extractor        = %d\n", p.maParam.extractor);
+		fprintf(myfile, "descriptor       = %d\n", p.maParam.descriptor);
+		fprintf(myfile, "matcher          = %d\n", p.maParam.matcher);
+		fprintf(myfile, "ransacError      = %f\n", p.odParam.ransacError);
+		fprintf(myfile, "ransacProb       = %f\n", p.odParam.ransacProb);
+		fprintf(myfile, "imageSequence    = %d\n", p.odParam.imageSequence);
+	}
+	else
+	{
+		fprintf(myfile, "extractor        = %d\n", p.maParam.extractor);
+		fprintf(myfile, "ransacError      = %f\n", p.odParam.ransacError);
+		fprintf(myfile, "ransacProb       = %f\n", p.odParam.ransacProb);
+		fprintf(myfile, "imageSequence    = %d\n", p.odParam.imageSequence);
+	}
+
+	fprintf(myfile, "\nTotal time: %f sec\n", t / CLOCKS_PER_SEC);
+	fprintf(myfile, "Time/frame: %f sec/frame\n", t / CLOCKS_PER_SEC / lastFrame);
+
+	fclose(myfile);
+}
 
 void writeMatrix(vector< vector<double> > &res)
 {
-	FILE *myfile = fopen("/Users/Raman/Documents/Programmering/opencv/VO/odometry/results/data/00.txt", "w");
+	FILE *myfile = fopen("/Users/Raman/Documents/Programmering/opencv/VO/odometry/results/data/01.txt", "w");
 
 	vector< vector<double> >::iterator it;
 
@@ -68,13 +95,10 @@ int main(int argc, const char * argv[])
 	// 1: ORB     1: ORB      1: FLANN: KDTree
 	// 2: SURF    2: SURF     2: FLANN: LSH
 	// 3: SIFT    3: SIFT
-	param.maParam.extractor        = 0;
-	param.maParam.descriptor       = 1;
-	param.maParam.matcher          = 2;
+	param.maParam.extractor        = 2;
+	param.maParam.descriptor       = 2;
+	param.maParam.matcher          = 1;
 	param.maParam.bucketing        = 0;
-	param.odParam.f                = 718.856;
-	param.odParam.cu               = 607.1928;
-	param.odParam.cv               = 185.2157;
 	param.odParam.cameraHeight     = 1.6;
 	param.odParam.pitch            = -0.08;
 	param.odParam.pnpFlags         = cv::SOLVEPNP_P3P;
@@ -82,11 +106,43 @@ int main(int argc, const char * argv[])
 	param.odParam.ransacError      = 0.5;
 	param.odParam.ransacProb       = 0.999;
 	param.odParam.scaling          = 2;
-	param.odParam.motionThreshold  = 100;
 	param.odParam.method           = 0;
 	param.odParam.doBundle         = 0;
 	param.odParam.bundleParam      = 20;
-	param.odParam.imageSequence    = 10;
+	param.odParam.imageSequence    = 1;
+
+	switch (param.odParam.imageSequence)
+	{
+		case 0:
+			param.odParam.f  = 718.856;
+			param.odParam.cu = 607.1928;
+			param.odParam.cv = 185.2157;
+			break;
+		case 1:
+			param.odParam.f  = 718.856;
+			param.odParam.cu = 607.1928;
+			param.odParam.cv = 185.2157;
+			break;
+		case 2:
+			param.odParam.f  = 718.856;
+			param.odParam.cu = 607.1928;
+			param.odParam.cv = 185.2157;
+			break;
+		case 3:
+			param.odParam.f  = 721.5377;
+			param.odParam.cu = 609.5593;
+			param.odParam.cv = 172.8540;
+			break;
+		case 4:
+			param.odParam.f  = 707.0912;
+			param.odParam.cu = 601.8873;
+			param.odParam.cv = 183.1104;
+			break;
+		default:
+			param.odParam.f  = 718.856;
+			param.odParam.cu = 607.1928;
+			param.odParam.cv = 185.2157;
+	}
 
 	DIR* dir = opendir("/Users/Raman/Documents/Programmering/opencv/VO/odometry/results/data/");
 	if (dir)
@@ -118,23 +174,28 @@ int main(int argc, const char * argv[])
 		{
 			case 0:
 				sprintf(imageName,
-						"/Volumes/RamanExtern/Data/dataset/sequences/00/image_0/%06d.png", frame);
+						"/Volumes/Ramans_USB/00/image_0/%06d.png", frame);
+						//"/Volumes/RamanExtern/Data/dataset/sequences/00/image_0/%06d.png", frame);
 				break;
 			case 1:
 				sprintf(imageName,
-						"/Volumes/RamanExtern/Data/dataset/sequences/01/image_0/%06d.png", frame);
+						"/Volumes/Ramans_USB/01/image_0/%06d.png", frame);
+						//"/Volumes/RamanExtern/Data/dataset/sequences/01/image_0/%06d.png", frame);
 				break;
 			case 2:
 				sprintf(imageName,
-						"/Volumes/RamanExtern/Data/dataset/sequences/02/image_0/%06d.png", frame);
+						"/Volumes/Ramans_USB/02/image_0/%06d.png", frame);
+						//"/Volumes/RamanExtern/Data/dataset/sequences/02/image_0/%06d.png", frame);
 				break;
 			case 3:
 				sprintf(imageName,
-						"/Volumes/RamanExtern/Data/dataset/sequences/03/image_0/%06d.png", frame);
+						"/Volumes/Ramans_USB/03/image_0/%06d.png", frame);
+						//"/Volumes/RamanExtern/Data/dataset/sequences/03/image_0/%06d.png", frame);
 				break;
 			case 4:
 				sprintf(imageName,
-						"/Volumes/RamanExtern/Data/dataset/sequences/04/image_0/%06d.png", frame);
+						"/Volumes/Ramans_USB/04/image_0/%06d.png", frame);
+						//"/Volumes/RamanExtern/Data/dataset/sequences/04/image_0/%06d.png", frame);
 				break;
 			default:
 				sprintf(imageName,
@@ -145,9 +206,9 @@ int main(int argc, const char * argv[])
 		bool ok = viso->process(image);
 		if (ok && frame > 0)
 		{
-			Tr = viso->getMotion();
-			invTr = Tr.inv();
-			temp = prev_Tr * invTr;
+			Tr     = viso->getMotion();
+			invTr  = Tr.inv();
+			temp   = prev_Tr * invTr;
 			new_Tr = temp.clone();
 		}
 		else
@@ -159,7 +220,7 @@ int main(int argc, const char * argv[])
 		{
 			x = prev_Tr.at<double>(0, 3);
 			y = prev_Tr.at<double>(2, 3);
-			*(ptr + idx) = x;
+			*(ptr + idx)     = x;
 			*(ptr + idx + 1) = y;
 			idx = idx + 2;
 			cout << "I: " << frame << " x: " << x << " y: " << y << endl;
@@ -176,6 +237,7 @@ int main(int argc, const char * argv[])
 
 	writeToFile(ptr);
 	writeMatrix(result);
+	writeInfo(param, double(end - start));
 	cout << "Data saved" << endl;
 
 	delete viso;

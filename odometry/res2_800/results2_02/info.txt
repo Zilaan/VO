@@ -1,0 +1,9 @@
+extractor        = 2
+descriptor       = 2
+matcher          = 1
+ransacError      = 0.500000
+ransacProb       = 0.999000
+imageSequence    = 2
+
+Total time: 4520.898123 sec
+Time/frame: 0.969942 sec/frame
